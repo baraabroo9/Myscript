@@ -1,0 +1,376 @@
+-- [[ Baraa Hub V2 - Hiding Toggle Engine ]] --
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
+
+local CONFIG_FILE = "Baraa_UI_Config.json"
+
+-- Default Settings
+local Settings = {
+    HeadToggle = false,
+    HeadReach = 1,
+    ChestToggle = false,
+    ChestReach = 1,
+    HandsToggle = false,
+    HandsReach = 1,
+    LegsToggle = false,
+    LegsReach = 1,
+    ReachTransparency = 5,
+    InfiniteStamina = false
+}
+
+-- [[ CONFIGURATION SYSTEM ]] --
+local function saveSettings()
+    if writefile then
+        local success, encoded = pcall(HttpService.JSONEncode, HttpService, Settings)
+        if success then writefile(CONFIG_FILE, encoded) end
+    end
+end
+
+local function loadSettings()
+    if readfile and isfile and isfile(CONFIG_FILE) then
+        local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(CONFIG_FILE))
+        if success then
+            for k, v in pairs(decoded) do
+                Settings[k] = v
+            end
+        end
+    end
+end
+
+loadSettings()
+
+-- [[ MAIN UI CREATION ]] --
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BaraaHubSandboxMenu"
+ScreenGui.ResetOnSpawn = false
+if syn and syn.protect_gui then syn.protect_gui(ScreenGui) end
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 360, 0, 480)
+MainFrame.Position = UDim2.new(0.5, -180, 0.5, -240)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 18, 24)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Visible = true -- Controlled via toggles now
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+-- [[ SMALL RE-OPEN TOGGLE BUTTON ]] --
+local OpenButton = Instance.new("TextButton")
+OpenButton.Size = UDim2.new(0, 80, 0, 30)
+OpenButton.Position = UDim2.new(0.5, -40, 0, 10) -- Top middle of screen
+OpenButton.BackgroundColor3 = Color3.fromRGB(45, 25, 75)
+OpenButton.BorderSizePixel = 0
+OpenButton.Text = "Menu"
+OpenButton.TextColor3 = Color3.fromRGB(240, 240, 245)
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.TextSize = 14
+OpenButton.Visible = false -- Hidden by default while UI is open
+OpenButton.ZIndex = 10
+OpenButton.Parent = ScreenGui
+
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 8)
+OpenCorner.Parent = OpenButton
+
+-- [[ PC & MOBILE DRAG IMPLEMENTATION ]] --
+local dragging, dragInput, dragStart, startPos
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
+end)
+
+-- Header Bar
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 45)
+Header.BackgroundColor3 = Color3.fromRGB(45, 25, 75)
+Header.BorderSizePixel = 0
+Header.Parent = MainFrame
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 12)
+HeaderCorner.Parent = Header
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0.6, 0, 1, 0)
+Title.Position = UDim2.new(0.05, 0, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "BARAA HUB V2"
+Title.TextColor3 = Color3.fromRGB(240, 240, 245)
+Title.TextSize = 16
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Header
+
+-- Close Button (X)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 35, 0, 35)
+CloseBtn.Position = UDim2.new(1, -40, 0.5, -17.5)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(230, 90, 90)
+CloseBtn.TextSize = 18
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = Header
+
+-- Permanent Wipe Button (Ø)
+local PermCloseBtn = Instance.new("TextButton")
+PermCloseBtn.Size = UDim2.new(0, 35, 0, 35)
+PermCloseBtn.Position = UDim2.new(1, -75, 0.5, -17.5)
+PermCloseBtn.BackgroundTransparency = 1
+PermCloseBtn.Text = "Ø"
+PermCloseBtn.TextColor3 = Color3.fromRGB(140, 140, 145)
+PermCloseBtn.TextSize = 16
+PermCloseBtn.Font = Enum.Font.GothamBold
+PermCloseBtn.Parent = Header
+
+-- Content Container
+local ContentList = Instance.new("ScrollingFrame")
+ContentList.Size = UDim2.new(1, -20, 1, -65)
+ContentList.Position = UDim2.new(0, 10, 0, 55)
+ContentList.BackgroundTransparency = 1
+ContentList.CanvasSize = UDim2.new(0, 0, 0, 650)
+ContentList.ScrollBarThickness = 4
+ContentList.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 14)
+UIListLayout.Parent = ContentList
+
+-- [[ UI COMPONENT FACTORIES ]] --
+local function createToggle(name, configKey)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, 0, 0, 35)
+    Container.BackgroundTransparency = 1
+    Container.Parent = ContentList
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.7, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = name
+    Label.TextColor3 = Color3.fromRGB(210, 210, 215)
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Container
+
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0, 46, 0, 24)
+    Button.Position = UDim2.new(1, -46, 0.5, -12)
+    Button.BackgroundColor3 = Settings[configKey] and Color3.fromRGB(130, 80, 220) or Color3.fromRGB(40, 38, 45)
+    Button.Text = ""
+    Button.Parent = Container
+
+    local BtnCorner = Instance.new("UICorner")
+    BtnCorner.CornerRadius = UDim.new(0, 12)
+    BtnCorner.Parent = Button
+
+    Button.MouseButton1Click:Connect(function()
+        Settings[configKey] = not Settings[configKey]
+        Button.BackgroundColor3 = Settings[configKey] and Color3.fromRGB(130, 80, 220) or Color3.fromRGB(40, 38, 45)
+        saveSettings()
+    end)
+end
+
+local function createSlider(name, configKey, min, max)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, 0, 0, 50)
+    Container.BackgroundTransparency = 1
+    Container.Parent = ContentList
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.BackgroundTransparency = 1
+    Label.Text = name .. ": " .. tostring(Settings[configKey])
+    Label.TextColor3 = Color3.fromRGB(180, 180, 185)
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Container
+
+    local SlideTrack = Instance.new("TextButton")
+    SlideTrack.Size = UDim2.new(1, 0, 0, 8)
+    SlideTrack.Position = UDim2.new(0, 0, 0, 28)
+    SlideTrack.BackgroundColor3 = Color3.fromRGB(40, 38, 45)
+    SlideTrack.Text = ""
+    SlideTrack.Parent = Container
+
+    local TrackCorner = Instance.new("UICorner")
+    TrackCorner.CornerRadius = UDim.new(0, 4)
+    TrackCorner.Parent = SlideTrack
+
+    local SlideFill = Instance.new("Frame")
+    local initPercent = (Settings[configKey] - min) / (max - min)
+    SlideFill.Size = UDim2.new(initPercent, 0, 1, 0)
+    SlideFill.BackgroundColor3 = Color3.fromRGB(130, 80, 220)
+    SlideFill.BorderSizePixel = 0
+    SlideFill.Parent = SlideTrack
+    
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(0, 4)
+    FillCorner.Parent = SlideFill
+
+    local function updateSlider(inputX)
+        local percentage = math.clamp((inputX - SlideTrack.AbsolutePosition.X) / SlideTrack.AbsoluteSize.X, 0, 1)
+        SlideFill.Size = UDim2.new(percentage, 0, 1, 0)
+        local value = math.floor(min + (percentage * (max - min)))
+        Label.Text = name .. ": " .. tostring(value)
+        Settings[configKey] = value
+        saveSettings()
+    end
+
+    SlideTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            updateSlider(input.Position.X)
+            local moveCon
+            moveCon = UserInputService.InputChanged:Connect(function(changedInput)
+                if changedInput.UserInputType == Enum.UserInputType.MouseMovement or changedInput.UserInputType == Enum.UserInputType.Touch then
+                    updateSlider(changedInput.Position.X)
+                end
+            end)
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    moveCon:Disconnect()
+                end
+            end)
+        end
+    end)
+end
+
+-- [[ CORE SYSTEM INJECTION ]] --
+local function runReachLogic(partName, toggleState, sliderVal)
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local targetPart = player.Character:FindFirstChild(partName)
+            if targetPart and targetPart:IsA("BasePart") then
+                if toggleState and sliderVal > 1 then
+                    targetPart.Size = Vector3.new(sliderVal, sliderVal, sliderVal)
+                    targetPart.Transparency = Settings.ReachTransparency / 10
+                    targetPart.CanCollide = false
+                else
+                    if targetPart.Name == "Head" then
+                        targetPart.Size = Vector3.new(2, 1, 1)
+                    else
+                        targetPart.Size = Vector3.new(1, 2, 1)
+                    end
+                    targetPart.Transparency = 0
+                end
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    runReachLogic("Head", Settings.HeadToggle, Settings.HeadReach)
+    
+    runReachLogic("UpperTorso", Settings.ChestToggle, Settings.ChestReach)
+    runReachLogic("Torso", Settings.ChestToggle, Settings.ChestReach)
+    
+    runReachLogic("LeftHand", Settings.HandsToggle, Settings.HandsReach)
+    runReachLogic("RightHand", Settings.HandsToggle, Settings.HandsReach)
+    runReachLogic("LeftArm", Settings.HandsToggle, Settings.HandsReach)
+    runReachLogic("RightArm", Settings.HandsToggle, Settings.HandsReach)
+    
+    runReachLogic("LeftFoot", Settings.LegsToggle, Settings.LegsReach)
+    runReachLogic("RightFoot", Settings.LegsToggle, Settings.LegsReach)
+    runReachLogic("LeftLeg", Settings.LegsToggle, Settings.LegsReach)
+    runReachLogic("RightLeg", Settings.LegsToggle, Settings.LegsReach)
+
+    if Settings.InfiniteStamina then
+        local char = LocalPlayer.Character
+        if char then
+            local stamina = char:FindFirstChild("Stamina") or char:FindFirstChild("Energy") or LocalPlayer:FindFirstChild("Stamina")
+            if stamina and (stamina:IsA("NumberValue") or stamina:IsA("IntValue")) then
+                stamina.Value = 100
+            end
+        end
+    end
+end)
+
+-- [[ GENERATE UI STRUCTURES ]] --
+createToggle("Enable Head Reach", "HeadToggle")
+createSlider("Head Range", "HeadReach", 1, 10)
+
+createToggle("Enable Chest Reach", "ChestToggle")
+createSlider("Chest Range", "ChestReach", 1, 10)
+
+createToggle("Enable Hands Reach", "HandsToggle")
+createSlider("Hands Range", "HandsReach", 1, 10)
+
+createToggle("Enable Legs Reach", "LegsToggle")
+createSlider("Legs Range", "LegsReach", 1, 10)
+
+createSlider("Reach Transp (0-10)", "ReachTransparency", 0, 10)
+createToggle("Infinite Stamina", "InfiniteStamina")
+
+local ConfigLabel = Instance.new("TextLabel")
+ConfigLabel.Size = UDim2.new(1, 0, 0, 30)
+ConfigLabel.BackgroundTransparency = 1
+ConfigLabel.Text = "• Platform Sync: PC & Mobile Active"
+ConfigLabel.TextColor3 = Color3.fromRGB(140, 135, 155)
+ConfigLabel.Font = Enum.Font.GothamItalic
+ConfigLabel.TextSize = 12
+ConfigLabel.TextXAlignment = Enum.TextXAlignment.Center
+ConfigLabel.Parent = ContentList
+
+-- [[ STABLE INTERFACE VISIBILITY TOGGLE ]] --
+local function hideMainUI()
+    MainFrame.Visible = false
+    OpenButton.Visible = true
+end
+
+local function showMainUI()
+    MainFrame.Visible = true
+    OpenButton.Visible = false
+end
+
+-- Close via X button
+CloseBtn.Activated:Connect(hideMainUI)
+CloseBtn.MouseButton1Click:Connect(hideMainUI)
+
+-- Reopen via [Menu] button
+OpenButton.Activated:Connect(showMainUI)
+OpenButton.MouseButton1Click:Connect(showMainUI)
+
+-- Permanent Wipe UI from execution environment completely
+PermCloseBtn.MouseButton1Click:Connect(function()
+    if delfile and isfile(CONFIG_FILE) then
+        pcall(delfile, CONFIG_FILE)
+    end
+    ScreenGui:Destroy()
+end)
