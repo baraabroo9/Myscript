@@ -489,4 +489,3 @@ local function CreateDynamicReachEsp(targetPlayer)
 end
 
 -- Monitor all players except local player
-for _, p in ipairs(Playe
