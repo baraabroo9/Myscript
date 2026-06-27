@@ -1,0 +1,489 @@
+-- Configuration State
+local BaraaHubSettings = {
+    ReachEnabled = false,
+    EspEnabled = false,
+    VortexPull = false,       
+    HyperVelocity = false,    
+    SafeZonePusher = false, 
+    AutoKillArena = false,  
+    CurrentReach = 6,
+    MinReach = 1,
+    MaxReach = 45,
+    LaunchPower = 3,          
+    FlingDistance = 15,     
+    SessionHits = 0,
+    
+    SafeZoneCenter = Vector3.new(0, 0, 0), 
+    SafeZoneRadius = 30
+}
+
+--> Services <--
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+--> LocalPlayer Variables <--
+local player = Players.LocalPlayer
+local playerCharacter = player.Character or player.CharacterAdded:Wait()
+
+player.CharacterAdded:Connect(function(NewCharacter)
+    playerCharacter = NewCharacter
+end)
+
+-- Clear previous instances to avoid overlay clones
+local oldUi = player:WaitForChild("PlayerGui"):FindFirstChild("BaraaHub_V5_ElitePro")
+if oldUi then oldUi:Destroy() end
+
+--------------------------------------------------------------------------------
+-- V5 ELITE-PRO MOBILE COMPACT UI
+--------------------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BaraaHub_V5_ElitePro"
+ScreenGui.DisplayOrder = 999999
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 315, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -157, 0.5, -125) -- Center
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 8, 14)
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 1.8
+UIStroke.Color = Color3.fromRGB(150, 65, 255)
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIStroke.Parent = MainFrame
+
+-- Premium Border Neon Pulse Animation
+task.spawn(function()
+    while task.wait(1.2) do
+        if not MainFrame or not MainFrame.Parent then break end
+        TweenService:Create(UIStroke, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(65, 15, 175)}):Play()
+        task.wait(1.2)
+        TweenService:Create(UIStroke, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Color = Color3.fromRGB(165, 80, 255)}):Play()
+    end
+end)
+
+-- Drag Bar Top
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(16, 13, 22)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopCorner = Instance.new("UICorner")
+TopCorner.CornerRadius = UDim.new(0, 12)
+TopCorner.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.new(0, 14, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "BARAA HUB V5 // ELITE-PRO EDITION"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 11
+Title.Parent = TopBar
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -35, 0.5, -15)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "✕"
+CloseButton.TextColor3 = Color3.fromRGB(190, 190, 200)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 12
+CloseButton.Parent = TopBar
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Drag Logic for Mobile Touch
+local dragging, dragInput, dragStart, startPos
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, -16, 1, -45)
+ScrollingFrame.Position = UDim2.new(0, 8, 0, 40)
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.BorderSizePixel = 0
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 280) 
+ScrollingFrame.ScrollBarThickness = 3
+ScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(140, 60, 255)
+ScrollingFrame.Parent = MainFrame
+
+local UIGridLayout = Instance.new("UIGridLayout")
+UIGridLayout.CellSize = UDim2.new(0, 144, 0, 32)
+UIGridLayout.CellPadding = UDim2.new(0, 7, 0, 6)
+UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIGridLayout.Parent = ScrollingFrame
+
+local function StyleButton(button, state, defaultText, activeText)
+    local targetColor = state and Color3.fromRGB(140, 60, 255) or Color3.fromRGB(24, 21, 28)
+    local targetTextColor = state and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(155, 150, 165)
+    button.Text = state and activeText or defaultText
+    
+    TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+        BackgroundColor3 = targetColor,
+        TextColor3 = targetTextColor
+    }):Play()
+end
+
+-- Toggles
+local ReachToggle = Instance.new("TextButton")
+ReachToggle.LayoutOrder = 1
+ReachToggle.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+ReachToggle.Text = "Reach: OFF"
+ReachToggle.TextColor3 = Color3.fromRGB(155, 150, 165)
+ReachToggle.Font = Enum.Font.GothamSemibold
+ReachToggle.TextSize = 11
+ReachToggle.Parent = ScrollingFrame
+Instance.new("UICorner", ReachToggle).CornerRadius = UDim.new(0, 6)
+
+ReachToggle.MouseButton1Click:Connect(function()
+    BaraaHubSettings.ReachEnabled = not BaraaHubSettings.ReachEnabled
+    StyleButton(ReachToggle, BaraaHubSettings.ReachEnabled, "Reach: OFF", "Reach: ON")
+end)
+
+local EspToggle = Instance.new("TextButton")
+EspToggle.LayoutOrder = 2
+EspToggle.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+EspToggle.Text = "Aura Floor Ring: OFF"
+EspToggle.TextColor3 = Color3.fromRGB(155, 150, 165)
+EspToggle.Font = Enum.Font.GothamSemibold
+EspToggle.TextSize = 11
+EspToggle.Parent = ScrollingFrame
+Instance.new("UICorner", EspToggle).CornerRadius = UDim.new(0, 6)
+
+EspToggle.MouseButton1Click:Connect(function()
+    BaraaHubSettings.EspEnabled = not BaraaHubSettings.EspEnabled
+    StyleButton(EspToggle, BaraaHubSettings.EspEnabled, "Aura Floor Ring: OFF", "Aura Floor Ring: ON")
+end)
+
+local VortexToggle = Instance.new("TextButton")
+VortexToggle.LayoutOrder = 3
+VortexToggle.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+VortexToggle.Text = "Vortex Pull: OFF"
+VortexToggle.TextColor3 = Color3.fromRGB(155, 150, 165)
+VortexToggle.Font = Enum.Font.GothamSemibold
+VortexToggle.TextSize = 11
+VortexToggle.Parent = ScrollingFrame
+Instance.new("UICorner", VortexToggle).CornerRadius = UDim.new(0, 6)
+
+VortexToggle.MouseButton1Click:Connect(function()
+    BaraaHubSettings.VortexPull = not BaraaHubSettings.VortexPull
+    StyleButton(VortexToggle, BaraaHubSettings.VortexPull, "Vortex Pull: OFF", "Vortex Pull: ON")
+end)
+
+local VelocityToggle = Instance.new("TextButton")
+VelocityToggle.LayoutOrder = 4
+VelocityToggle.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+VelocityToggle.Text = "Hyper Velocity: OFF"
+VelocityToggle.TextColor3 = Color3.fromRGB(155, 150, 165)
+VelocityToggle.Font = Enum.Font.GothamSemibold
+VelocityToggle.TextSize = 11
+VelocityToggle.Parent = ScrollingFrame
+Instance.new("UICorner", VelocityToggle).CornerRadius = UDim.new(0, 6)
+
+VelocityToggle.MouseButton1Click:Connect(function()
+    BaraaHubSettings.HyperVelocity = not BaraaHubSettings.HyperVelocity
+    StyleButton(VelocityToggle, BaraaHubSettings.HyperVelocity, "Hyper Velocity: OFF", "Hyper Velocity: ON")
+end)
+
+local PusherToggle = Instance.new("TextButton")
+PusherToggle.LayoutOrder = 5
+PusherToggle.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+PusherToggle.Text = "SZ Fling: OFF"
+PusherToggle.TextColor3 = Color3.fromRGB(155, 150, 165)
+PusherToggle.Font = Enum.Font.GothamSemibold
+PusherToggle.TextSize = 11
+PusherToggle.Parent = ScrollingFrame
+Instance.new("UICorner", PusherToggle).CornerRadius = UDim.new(0, 6)
+
+PusherToggle.MouseButton1Click:Connect(function()
+    BaraaHubSettings.SafeZonePusher = not BaraaHubSettings.SafeZonePusher
+    StyleButton(PusherToggle, BaraaHubSettings.SafeZonePusher, "SZ Fling: OFF", "SZ Fling: ON")
+end)
+
+local AutoKillToggle = Instance.new("TextButton")
+AutoKillToggle.LayoutOrder = 6
+AutoKillToggle.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+AutoKillToggle.Text = "Auto-Kill: OFF"
+AutoKillToggle.TextColor3 = Color3.fromRGB(155, 150, 165)
+AutoKillToggle.Font = Enum.Font.GothamSemibold
+AutoKillToggle.TextSize = 11
+AutoKillToggle.Parent = ScrollingFrame
+Instance.new("UICorner", AutoKillToggle).CornerRadius = UDim.new(0, 6)
+
+AutoKillToggle.MouseButton1Click:Connect(function()
+    BaraaHubSettings.AutoKillArena = not BaraaHubSettings.AutoKillArena
+    StyleButton(AutoKillToggle, BaraaHubSettings.AutoKillArena, "Auto-Kill: OFF", "Auto-Kill: ON")
+end)
+
+--------------------------------------------------------------------------------
+-- INTEGRATED ADJUSTMENT ENGINE PANEL
+--------------------------------------------------------------------------------
+local LowerPanel = Instance.new("Frame")
+LowerPanel.LayoutOrder = 7
+LowerPanel.Size = UDim2.new(1, 0, 0, 150)
+LowerPanel.BackgroundTransparency = 1
+LowerPanel.Parent = ScrollingFrame
+
+local SliderLabel = Instance.new("TextLabel")
+SliderLabel.Size = UDim2.new(1, 0, 0, 15)
+SliderLabel.Position = UDim2.new(0, 0, 0, 6)
+SliderLabel.BackgroundTransparency = 1
+SliderLabel.Text = "REACH DISTANCE: " .. BaraaHubSettings.CurrentReach .. " STUDS"
+SliderLabel.TextColor3 = Color3.fromRGB(195, 190, 205)
+SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+SliderLabel.Font = Enum.Font.GothamBold
+SliderLabel.TextSize = 10
+SliderLabel.Parent = LowerPanel
+
+local SliderTrack = Instance.new("Frame")
+SliderTrack.Size = UDim2.new(1, -10, 0, 5)
+SliderTrack.Position = UDim2.new(0, 0, 0, 24)
+SliderTrack.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+SliderTrack.BorderSizePixel = 0
+SliderTrack.Parent = LowerPanel
+Instance.new("UICorner", SliderTrack).CornerRadius = UDim.new(0, 3)
+
+local SliderFill = Instance.new("Frame")
+SliderFill.Size = UDim2.new(0, 0, 1, 0)
+SliderFill.BackgroundColor3 = Color3.fromRGB(140, 60, 255)
+SliderFill.BorderSizePixel = 0
+SliderFill.Parent = SliderTrack
+Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(0, 3)
+
+local SliderButton = Instance.new("TextButton")
+SliderButton.Size = UDim2.new(0, 14, 0, 14)
+SliderButton.Position = UDim2.new(0, -7, 0.5, -7)
+SliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SliderButton.Text = ""
+SliderButton.Parent = SliderTrack
+Instance.new("UICorner", SliderButton).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", SliderButton).Color = Color3.fromRGB(140, 60, 255)
+
+local holdingSlider = false
+local function updateSlider()
+    local mousePos = UserInputService:GetMouseLocation().X
+    local trackPos = SliderTrack.AbsolutePosition.X
+    local trackWidth = SliderTrack.AbsoluteSize.X
+    
+    local percentage = math.clamp((mousePos - trackPos) / trackWidth, 0, 1)
+    local rawValue = BaraaHubSettings.MinReach + (percentage * (BaraaHubSettings.MaxReach - BaraaHubSettings.MinReach))
+    BaraaHubSettings.CurrentReach = math.round(rawValue)
+    
+    SliderButton.Position = UDim2.new(percentage, -7, 0.5, -7)
+    SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+    SliderLabel.Text = "REACH DISTANCE: " .. BaraaHubSettings.CurrentReach .. " STUDS"
+end
+
+SliderButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then holdingSlider = true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then holdingSlider = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if holdingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider() end
+end)
+
+local Slider2Label = Instance.new("TextLabel")
+Slider2Label.Size = UDim2.new(1, 0, 0, 15)
+Slider2Label.Position = UDim2.new(0, 0, 0, 38)
+Slider2Label.BackgroundTransparency = 1
+Slider2Label.Text = "LAUNCH POWER MULTIPLIER: " .. BaraaHubSettings.LaunchPower .. "X"
+Slider2Label.TextColor3 = Color3.fromRGB(195, 190, 205)
+Slider2Label.TextXAlignment = Enum.TextXAlignment.Left
+Slider2Label.Font = Enum.Font.GothamBold
+Slider2Label.TextSize = 10
+Slider2Label.Parent = LowerPanel
+
+local Slider2Track = Instance.new("Frame")
+Slider2Track.Size = UDim2.new(1, -10, 0, 5)
+Slider2Track.Position = UDim2.new(0, 0, 0, 56)
+Slider2Track.BackgroundColor3 = Color3.fromRGB(24, 21, 28)
+Slider2Track.BorderSizePixel = 0
+Slider2Track.Parent = LowerPanel
+Instance.new("UICorner", Slider2Track).CornerRadius = UDim.new(0, 3)
+
+local Slider2Fill = Instance.new("Frame")
+Slider2Fill.Size = UDim2.new(0, 0, 1, 0)
+Slider2Fill.BackgroundColor3 = Color3.fromRGB(165, 80, 255)
+Slider2Fill.BorderSizePixel = 0
+Slider2Fill.Parent = Slider2Track
+Instance.new("UICorner", Slider2Fill).CornerRadius = UDim.new(0, 3)
+
+local Slider2Button = Instance.new("TextButton")
+Slider2Button.Size = UDim2.new(0, 14, 0, 14)
+Slider2Button.Position = UDim2.new(0, -7, 0.5, -7)
+Slider2Button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+Slider2Button.Text = ""
+Slider2Button.Parent = Slider2Track
+Instance.new("UICorner", Slider2Button).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", Slider2Button).Color = Color3.fromRGB(165, 80, 255)
+
+local holdingSlider2 = false
+local function updateSlider2()
+    local mousePos = UserInputService:GetMouseLocation().X
+    local trackPos = Slider2Track.AbsolutePosition.X
+    local trackWidth = Slider2Track.AbsoluteSize.X
+    
+    local percentage = math.clamp((mousePos - trackPos) / trackWidth, 0, 1)
+    local val = 1 + (percentage * 9) 
+    BaraaHubSettings.LaunchPower = math.round(val)
+    
+    Slider2Button.Position = UDim2.new(percentage, -7, 0.5, -7)
+    Slider2Fill.Size = UDim2.new(percentage, 0, 1, 0)
+    Slider2Label.Text = "LAUNCH POWER MULTIPLIER: " .. BaraaHubSettings.LaunchPower .. "X"
+end
+
+Slider2Button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then holdingSlider2 = true end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then holdingSlider2 = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if holdingSlider2 and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSlider2() end
+end)
+
+local initPct1 = (BaraaHubSettings.CurrentReach - BaraaHubSettings.MinReach) / (BaraaHubSettings.MaxReach - BaraaHubSettings.MinReach)
+SliderButton.Position = UDim2.new(initPct1, -7, 0.5, -7)
+SliderFill.Size = UDim2.new(initPct1, 0, 1, 0)
+
+local initPct2 = (BaraaHubSettings.LaunchPower - 1) / 9
+Slider2Button.Position = UDim2.new(initPct2, -7, 0.5, -7)
+Slider2Fill.Size = UDim2.new(initPct2, 0, 1, 0)
+
+local Divider = Instance.new("Frame")
+Divider.Size = UDim2.new(1, -10, 0, 1)
+Divider.Position = UDim2.new(0, 0, 0, 74)
+Divider.BackgroundColor3 = Color3.fromRGB(36, 32, 45)
+Divider.BorderSizePixel = 0
+Divider.Parent = LowerPanel
+
+local RadarLabel = Instance.new("TextLabel")
+RadarLabel.Size = UDim2.new(0, 180, 0, 15)
+RadarLabel.Position = UDim2.new(0, 0, 0, 82)
+RadarLabel.BackgroundTransparency = 1
+RadarLabel.Text = "RADAR: PASSIVE SCAN..."
+RadarLabel.TextColor3 = Color3.fromRGB(130, 125, 140)
+RadarLabel.TextXAlignment = Enum.TextXAlignment.Left
+RadarLabel.Font = Enum.Font.Code
+RadarLabel.TextSize = 10
+RadarLabel.Parent = LowerPanel
+
+local SessionLabel = Instance.new("TextLabel")
+SessionLabel.Size = UDim2.new(0, 100, 0, 15)
+SessionLabel.Position = UDim2.new(1, -20, 0, 82)
+SessionLabel.BackgroundTransparency = 1
+SessionLabel.Text = "COMBO HITS: 0"
+SessionLabel.TextColor3 = Color3.fromRGB(150, 65, 255)
+SessionLabel.TextXAlignment = Enum.TextXAlignment.Right
+SessionLabel.Font = Enum.Font.GothamBold
+SessionLabel.TextSize = 10
+SessionLabel.Parent = LowerPanel
+
+local HitIndicator = Instance.new("TextLabel")
+HitIndicator.Size = UDim2.new(1, -10, 0, 22)
+HitIndicator.Position = UDim2.new(0, 0, 0, 104)
+HitIndicator.BackgroundColor3 = Color3.fromRGB(26, 12, 42)
+HitIndicator.Text = "⚡ COMBO STRIKE REGISTRATION ⚡"
+HitIndicator.TextColor3 = Color3.fromRGB(185, 105, 255)
+HitIndicator.Font = Enum.Font.GothamBold
+HitIndicator.TextSize = 9
+HitIndicator.TextTransparency = 1
+HitIndicator.BackgroundTransparency = 1
+HitIndicator.Parent = LowerPanel
+Instance.new("UICorner", HitIndicator).CornerRadius = UDim.new(0, 5)
+
+local indicatorStroke = Instance.new("UIStroke")
+indicatorStroke.Color = Color3.fromRGB(150, 65, 255)
+indicatorStroke.Transparency = 1
+indicatorStroke.Thickness = 1
+indicatorStroke.Parent = HitIndicator
+
+local isVisualizingHit = false
+local function FlashHitUI()
+    BaraaHubSettings.SessionHits = BaraaHubSettings.SessionHits + 1
+    SessionLabel.Text = "COMBO HITS: " .. BaraaHubSettings.SessionHits
+    
+    if isVisualizingHit then return end
+    isVisualizingHit = true
+    
+    HitIndicator.TextTransparency = 0
+    HitIndicator.BackgroundTransparency = 0
+    indicatorStroke.Transparency = 0
+    
+    task.delay(0.12, function()
+        local info = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(HitIndicator, info, {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+        TweenService:Create(indicatorStroke, info, {Transparency = 1}):Play()
+        task.wait(0.2)
+        isVisualizingHit = false
+    end)
+end
+
+--------------------------------------------------------------------------------
+-- UPGRADED RADIAL FLOOR-RING ESP ENGINE
+--------------------------------------------------------------------------------
+local function CreateDynamicReachEsp(targetPlayer)
+    if targetPlayer == player then return end
+
+    local RingEsp = Instance.new("CylinderHandleAdornment")
+    RingEsp.Name = "BaraaReach_FloorAura"
+    RingEsp.Color3 = Color3.fromRGB(150, 65, 255)
+    RingEsp.AlwaysOnTop = false 
+    RingEsp.ZIndex = 4
+    RingEsp.Transparency = 0.8
+    RingEsp.Height = 0.12
+    RingEsp.Parent = ScreenGui
+
+    RunService.RenderStepped:Connect(function()
+        if BaraaHubSettings.EspEnabled and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and targetPlayer.Character:FindFirstChild("Humanoid") and targetPlayer.Character.Humanoid.Health > 0 then
+            local oppRoot = targetPlayer.Character.HumanoidRootPart
+            RingEsp.Adornee = oppRoot
+            RingEsp.CFrame = CFrame.new(0, -3.2, 0) * CFrame.fromAxisAngle(Vector3.new(1, 0, 0), math.rad(90))
+            RingEsp.Radius = BaraaHubSettings.CurrentReach
+        else
+            RingEsp.Adornee = nil
+        end
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do CreateDynamicReachEsp(p) end
+Players.PlayerAdded:Connect(CreateDynamicReachEsp)
+
+--------------------------------------------------------------------------------
+-- PARALLEL RUNTIME CORE
+------------------------------
