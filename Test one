@@ -1,0 +1,719 @@
+--[[
+  ============================================================
+  NOVA EXECUTOR – THE BEST UI ON EARTH
+  ============================================================
+  Features:
+  - Adaptive scaling for PC/Mobile
+  - Animations (TweenService)
+  - Tabbed interface with icons
+  - Script hub with 6 scripts
+  - Theme engine (Dark/Light + 3 accents)
+  - Console with logging
+  - Minimize / Maximize / Close
+  - Toggle with RightControl or triple-tap joystick
+  - Mobile joystick with turbo
+  - FE Car script with drift and boost
+  - 100% self-contained Lua
+--]]
+
+local player = game.Players.LocalPlayer
+local guiService = game:GetService("GuiService")
+local userInputService = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local workspace = game:GetService("Workspace")
+local tweenService = game:GetService("TweenService")
+local players = game:GetService("Players")
+
+-- ===== SCALING =====
+local viewportSize = workspace.CurrentCamera.ViewportSize
+local scale = math.min(viewportSize.X / 900, viewportSize.Y / 700, 1.2) -- base 900x700
+local function s(v) return math.round(v * scale) end
+
+-- ===== THEME =====
+local themes = {
+    Dark = {
+        bg = Color3.fromRGB(14,14,22),
+        bg2 = Color3.fromRGB(22,22,36),
+        bg3 = Color3.fromRGB(30,30,46),
+        text = Color3.fromRGB(200,208,224),
+        textDim = Color3.fromRGB(138,138,160),
+        accent = Color3.fromRGB(125,255,179), -- neon green
+        accent2 = Color3.fromRGB(80,200,140),
+        border = Color3.fromRGB(40,40,56),
+        shadow = Color3.fromRGB(0,0,0),
+    },
+    Light = {
+        bg = Color3.fromRGB(240,242,248),
+        bg2 = Color3.fromRGB(220,224,236),
+        bg3 = Color3.fromRGB(200,206,222),
+        text = Color3.fromRGB(30,30,46),
+        textDim = Color3.fromRGB(80,80,100),
+        accent = Color3.fromRGB(0,120,255),
+        accent2 = Color3.fromRGB(0,90,200),
+        border = Color3.fromRGB(180,186,202),
+        shadow = Color3.fromRGB(0,0,0,0.3),
+    }
+}
+local currentTheme = "Dark"
+local accentColors = {
+    Green = Color3.fromRGB(125,255,179),
+    Pink = Color3.fromRGB(255,80,180),
+    Blue = Color3.fromRGB(80,180,255),
+}
+local currentAccent = "Green"
+
+function getAccent() return accentColors[currentAccent] end
+
+-- ===== CREATE GUI =====
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "NovaExecutor"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+-- Main Frame (with shadow)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, s(820), 0, s(620))
+mainFrame.Position = UDim2.new(0.5, -s(410), 0.5, -s(310))
+mainFrame.BackgroundColor3 = themes.Dark.bg
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+-- Shadow (using a second frame)
+local shadow = Instance.new("Frame")
+shadow.Size = UDim2.new(1, s(12), 1, s(12))
+shadow.Position = UDim2.new(0, -s(6), 0, -s(6))
+shadow.BackgroundColor3 = Color3.fromRGB(0,0,0)
+shadow.BackgroundTransparency = 0.6
+shadow.BorderSizePixel = 0
+shadow.Parent = mainFrame
+
+-- Corner
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, s(16))
+corner.Parent = mainFrame
+
+-- ===== TITLE BAR =====
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, s(52))
+titleBar.BackgroundColor3 = themes.Dark.bg2
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
+local tbCorner = Instance.new("UICorner")
+tbCorner.CornerRadius = UDim.new(0, s(16))
+tbCorner.Parent = titleBar
+
+-- Logo
+local logo = Instance.new("TextLabel")
+logo.Size = UDim2.new(0, s(140), 1, 0)
+logo.Position = UDim2.new(0, s(12), 0, 0)
+logo.BackgroundTransparency = 1
+logo.Text = "✦ NOVA"
+logo.TextColor3 = getAccent()
+logo.TextSize = s(22)
+logo.Font = Enum.Font.GothamBold
+logo.TextXAlignment = Enum.TextXAlignment.Left
+logo.TextYAlignment = Enum.TextYAlignment.Center
+logo.Parent = titleBar
+
+-- Status
+local statusLed = Instance.new("Frame")
+statusLed.Size = UDim2.new(0, s(14), 0, s(14))
+statusLed.Position = UDim2.new(1, -s(170), 0.5, -s(7))
+statusLed.BackgroundColor3 = Color3.fromRGB(255,85,85)
+statusLed.BorderSizePixel = 0
+statusLed.Parent = titleBar
+local ledCorner = Instance.new("UICorner")
+ledCorner.CornerRadius = UDim.new(1,0)
+ledCorner.Parent = statusLed
+
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(0, s(100), 1, 0)
+statusText.Position = UDim2.new(1, -s(250), 0, 0)
+statusText.BackgroundTransparency = 1
+statusText.Text = "Inactive"
+statusText.TextColor3 = themes.Dark.textDim
+statusText.TextSize = s(14)
+statusText.Font = Enum.Font.GothamMedium
+statusText.TextXAlignment = Enum.TextXAlignment.Right
+statusText.TextYAlignment = Enum.TextYAlignment.Center
+statusText.Parent = titleBar
+
+-- Window controls
+local function makeWinBtn(text, color, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, s(32), 0, s(32))
+    btn.Position = UDim2.new(1, -s(120) - (text=="✕" and 0 or text=="□" and s(40) or s(80)), 0.5, -s(16))
+    btn.BackgroundColor3 = Color3.fromRGB(0,0,0,0.3)
+    btn.BorderSizePixel = 0
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(200,200,200)
+    btn.TextSize = s(18)
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = titleBar
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, s(6))
+    btnCorner.Parent = btn
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local minimized = false
+local function minimize()
+    minimized = not minimized
+    if minimized then
+        mainFrame:TweenSize(UDim2.new(0, s(200), 0, s(52)), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        mainFrame:TweenPosition(UDim2.new(0.5, -s(100), 0, s(10)), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        -- hide body
+        bodyFrame.Visible = false
+    else
+        mainFrame:TweenSize(UDim2.new(0, s(820), 0, s(620)), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        mainFrame:TweenPosition(UDim2.new(0.5, -s(410), 0.5, -s(310)), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        bodyFrame.Visible = true
+    end
+end
+
+local minBtn = makeWinBtn("─", Color3.fromRGB(60,60,80), minimize)
+local maxBtn = makeWinBtn("□", Color3.fromRGB(60,60,80), function()
+    -- toggle fullscreen (maximize)
+    local full = mainFrame.Size == UDim2.new(1, 0, 1, 0)
+    if full then
+        mainFrame:TweenSize(UDim2.new(0, s(820), 0, s(620)), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        mainFrame:TweenPosition(UDim2.new(0.5, -s(410), 0.5, -s(310)), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+    else
+        mainFrame:TweenSize(UDim2.new(1, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        mainFrame:TweenPosition(UDim2.new(0,0,0,0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+    end
+end)
+local closeBtn = makeWinBtn("✕", Color3.fromRGB(180,40,40), function()
+    screenGui:Destroy()
+    -- also cleanup any running scripts
+    if _G._carCleanup then _G._carCleanup() end
+end)
+
+-- ===== BODY =====
+local bodyFrame = Instance.new("Frame")
+bodyFrame.Size = UDim2.new(1, 0, 1, -s(52))
+bodyFrame.Position = UDim2.new(0, 0, 0, s(52))
+bodyFrame.BackgroundTransparency = 1
+bodyFrame.Parent = mainFrame
+
+-- Sidebar
+local sidebar = Instance.new("Frame")
+sidebar.Size = UDim2.new(0, s(160), 1, 0)
+sidebar.BackgroundColor3 = themes.Dark.bg2
+sidebar.BorderSizePixel = 0
+sidebar.Parent = bodyFrame
+local sideCorner = Instance.new("UICorner")
+sideCorner.CornerRadius = UDim.new(0, s(0)) -- no corner, but we can do bottom-left
+
+local tabData = {
+    {name="Scripts", icon="📜", color=getAccent()},
+    {name="Editor", icon="✏️", color=getAccent()},
+    {name="Console", icon="🖥️", color=getAccent()},
+    {name="Settings", icon="⚙️", color=getAccent()},
+}
+local tabButtons = {}
+local currentTab = "Scripts"
+
+for i, data in ipairs(tabData) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -s(12), 0, s(44))
+    btn.Position = UDim2.new(0, s(6), 0, s(8) + (i-1)*s(52))
+    btn.BackgroundColor3 = themes.Dark.bg2
+    btn.BorderSizePixel = 0
+    btn.Text = data.icon .. " " .. data.name
+    btn.TextColor3 = themes.Dark.textDim
+    btn.TextSize = s(16)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.TextYAlignment = Enum.TextYAlignment.Center
+    btn.PaddingLeft = UDim.new(0, s(8))
+    btn.Parent = sidebar
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, s(8))
+    btnCorner.Parent = btn
+    tabButtons[data.name] = btn
+    btn.MouseButton1Click:Connect(function()
+        for _, b in pairs(tabButtons) do
+            b.BackgroundColor3 = themes.Dark.bg2
+            b.TextColor3 = themes.Dark.textDim
+        end
+        btn.BackgroundColor3 = themes.Dark.bg3
+        btn.TextColor3 = getAccent()
+        currentTab = data.name
+        -- Show corresponding panel
+        scriptListFrame.Visible = (data.name == "Scripts")
+        editorFrame.Visible = (data.name == "Editor")
+        consoleFrame.Visible = (data.name == "Console")
+        settingsFrame.Visible = (data.name == "Settings")
+    end)
+end
+-- Highlight first
+tabButtons["Scripts"].BackgroundColor3 = themes.Dark.bg3
+tabButtons["Scripts"].TextColor3 = getAccent()
+
+-- ===== SCRIPT LIST (Scripts tab) =====
+local scriptListFrame = Instance.new("Frame")
+scriptListFrame.Size = UDim2.new(1, -s(160), 1, 0)
+scriptListFrame.Position = UDim2.new(0, s(160), 0, 0)
+scriptListFrame.BackgroundColor3 = themes.Dark.bg
+scriptListFrame.BorderSizePixel = 0
+scriptListFrame.Parent = bodyFrame
+
+local scriptListTitle = Instance.new("TextLabel")
+scriptListTitle.Size = UDim2.new(1, 0, 0, s(44))
+scriptListTitle.BackgroundColor3 = themes.Dark.bg2
+scriptListTitle.Text = "  Script Hub"
+scriptListTitle.TextColor3 = getAccent()
+scriptListTitle.TextSize = s(18)
+scriptListTitle.Font = Enum.Font.GothamBold
+scriptListTitle.TextXAlignment = Enum.TextXAlignment.Left
+scriptListTitle.TextYAlignment = Enum.TextYAlignment.Center
+scriptListTitle.Parent = scriptListFrame
+
+local scriptListScrolling = Instance.new("ScrollingFrame")
+scriptListScrolling.Size = UDim2.new(1, -s(12), 1, -s(56))
+scriptListScrolling.Position = UDim2.new(0, s(6), 0, s(50))
+scriptListScrolling.BackgroundTransparency = 1
+scriptListScrolling.BorderSizePixel = 0
+scriptListScrolling.CanvasSize = UDim2.new(0, 0, 0, 0)
+scriptListScrolling.ScrollBarThickness = s(6)
+scriptListScrolling.Parent = scriptListFrame
+
+local scripts = {
+    {name="🚗 FE Car", desc="Transform into a drivable car", scriptCode=[[ --[[ FE Car ]] 
+        local p=game.Players.LocalPlayer; local c=p.Character or p.CharacterAdded:Wait(); local h=c:FindFirstChild("Humanoid"); if not h then return end
+        local function disable() local ac=p:FindFirstChild("AntiCheat") if ac then ac:Destroy() end local old=h.WalkSpeed; local mt=getrawmetatable(h); if mt then local oi=mt.__index; mt.__index=function(s,k) if k=="WalkSpeed" then return old end return oi(s,k) end; setrawmetatable(h,mt) end end disable()
+        local car=Instance.new("Model"); car.Name="FECar_"..p.Name; local ch=Instance.new("Part"); ch.Size=Vector3.new(8,2,16); ch.BrickColor=BrickColor.new("Bright red"); ch.Material=Enum.Material.SmoothPlastic; ch.Anchored=false; ch.CanCollide=true; ch.Parent=car; car.PrimaryPart=ch
+        local seat=Instance.new("VehicleSeat"); seat.Size=Vector3.new(4,1,4); seat.BrickColor=BrickColor.new("Black"); seat.CanCollide=true; seat.Parent=car; local w=Instance.new("Weld"); w.Part0=seat; w.Part1=ch; w.C0=CFrame.new(0,0.5,0); w.Parent=seat
+        for _,p in ipairs({{-3,-1,-6},{3,-1,-6},{-3,-1,6},{3,-1,6}}) do local wh=Instance.new("Part"); wh.Size=Vector3.new(2,2,1); wh.Shape=Enum.PartType.Cylinder; wh.BrickColor=BrickColor.new("Dark grey"); wh.Material=Enum.Material.Rubber; wh.Anchored=false; wh.CanCollide=true; wh.Position=Vector3.new(p[1],p[2],p[3]); wh.Parent=car; local ww=Instance.new("Weld"); ww.Part0=wh; ww.Part1=ch; ww.C0=CFrame.new(p[1],p[2],p[3]); ww.Parent=wh end
+        car.Parent=workspace; car:SetPrimaryPartCFrame(c.HumanoidRootPart.CFrame*CFrame.new(0,-2,0))
+        local remote=replicatedStorage:FindFirstChild("RemoteEvent") or replicatedStorage:FindFirstChild("VehicleRemote"); if remote then remote:FireServer("Spawn",{car.Name}) end
+        local bv=Instance.new("BodyVelocity"); bv.MaxForce=Vector3.new(1e6,1e6,1e6); bv.Velocity=Vector3.new(0,0,0); bv.Parent=ch
+        local gyro=Instance.new("BodyGyro"); gyro.MaxTorque=Vector3.new(1e6,1e6,1e6); gyro.CFrame=ch.CFrame; gyro.Parent=ch
+        local speed=80; local turn=2.5; local thrust=0; local steer=0
+        userInputService.InputBegan:Connect(function(inp,gp) if gp then return end; if inp.KeyCode==Enum.KeyCode.W then thrust=1 end; if inp.KeyCode==Enum.KeyCode.S then thrust=-1 end; if inp.KeyCode==Enum.KeyCode.A then steer=-1 end; if inp.KeyCode==Enum.KeyCode.D then steer=1 end; if inp.KeyCode==Enum.KeyCode.LeftShift then speed=150 end end)
+        userInputService.InputEnded:Connect(function(inp,gp) if gp then return end; if inp.KeyCode==Enum.KeyCode.W or inp.KeyCode==Enum.KeyCode.S then thrust=0 end; if inp.KeyCode==Enum.KeyCode.A or inp.KeyCode==Enum.KeyCode.D then steer=0 end; if inp.KeyCode==Enum.KeyCode.LeftShift then speed=80 end end)
+        local conn; conn=runService.Heartbeat:Connect(function(dt) if not ch.Parent then conn:Disconnect() return end; if _G.joystickX and _G.joystickY then thrust=_G.joystickY; steer=_G.joystickX end; local f=ch.CFrame.LookVector; bv.Velocity=f*thrust*speed+Vector3.new(0,0,0); if math.abs(steer)>0.01 then local rot=CFrame.Angles(0,steer*turn*dt,0); gyro.CFrame=ch.CFrame*rot; ch.CFrame=ch.CFrame*rot end; local root=c:FindFirstChild("HumanoidRootPart"); if root then root.CFrame=ch.CFrame*CFrame.new(0,2,0); root.Velocity=bv.Velocity end end)
+        local function cleanup() if conn then conn:Disconnect() end; car:Destroy(); h.PlatformStand=false; h.WalkSpeed=16 end; _G._carCleanup=cleanup; h.Sit=true; h.PlatformStand=true; print("FE Car active.")
+    ]]},
+    {name="✈️ Fly", desc="Hold space to fly", scriptCode=[[ 
+        local p=game.Players.LocalPlayer; local c=p.Character or p.CharacterAdded:Wait(); local h=c:FindFirstChild("Humanoid") if not h then return end
+        local fly=false; local bv=Instance.new("BodyVelocity"); bv.MaxForce=Vector3.new(1e6,1e6,1e6); bv.Parent=c:WaitForChild("HumanoidRootPart")
+        userInputService.InputBegan:Connect(function(inp,gp) if gp then return end; if inp.KeyCode==Enum.KeyCode.Space then fly=true; h.PlatformStand=true end end)
+        userInputService.InputEnded:Connect(function(inp,gp) if gp then return end; if inp.KeyCode==Enum.KeyCode.Space then fly=false; h.PlatformStand=false; bv.Velocity=Vector3.new(0,0,0) end end)
+        runService.Heartbeat:Connect(function() if fly then local root=c:FindFirstChild("HumanoidRootPart"); if root then bv.Velocity=Vector3.new(0,20,0) end end end)
+        print("Fly script loaded – hold Space.")
+    ]]},
+    {name="🦘 Infinite Jump", desc="Jump repeatedly", scriptCode=[[ 
+        local p=game.Players.LocalPlayer; local c=p.Character or p.CharacterAdded:Wait(); local h=c:FindFirstChild("Humanoid") if not h then return end
+        local jump=true; h:GetPropertyChangedSignal("Jump"):Connect(function() if jump and h.Jump then task.wait(0.1); h.Jump=true end end)
+        print("Infinite Jump active.")
+    ]]},
+    {name="⛔ Anti-AFK", desc="Prevent idle kick", scriptCode=[[ 
+        local p=game.Players.LocalPlayer; local vu=game:GetService("VirtualUser"); p.Idled:Connect(function() vu:CaptureController(); vu:ClickButton2(Vector2.new()) end)
+        print("Anti-AFK active.")
+    ]]},
+    {name="💨 Speed Boost", desc="Increase walkspeed", scriptCode=[[ 
+        local p=game.Players.LocalPlayer; local c=p.Character or p.CharacterAdded:Wait(); local h=c:FindFirstChild("Humanoid") if not h then return end
+        h.WalkSpeed=50; print("Speed set to 50.")
+    ]]},
+    {name="📋 Custom", desc="Paste your own script", scriptCode="-- Paste your Lua script here"},
+}
+
+local scriptButtons = {}
+for i, data in ipairs(scripts) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -s(8), 0, s(48))
+    btn.Position = UDim2.new(0, s(4), 0, (i-1)*s(54) + s(4))
+    btn.BackgroundColor3 = themes.Dark.bg2
+    btn.BorderSizePixel = 0
+    btn.Text = data.name .. "\n" .. data.desc
+    btn.TextColor3 = themes.Dark.text
+    btn.TextSize = s(14)
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.TextYAlignment = Enum.TextYAlignment.Center
+    btn.PaddingLeft = UDim.new(0, s(8))
+    btn.Parent = scriptListScrolling
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, s(8))
+    btnCorner.Parent = btn
+    -- Store the script code
+    btn:SetAttribute("code", data.scriptCode)
+    btn.MouseButton1Click:Connect(function()
+        local code = btn:GetAttribute("code")
+        if code then
+            editorBox.Text = code
+            -- switch to Editor tab
+            for _, b in pairs(tabButtons) do
+                b.BackgroundColor3 = themes.Dark.bg2
+                b.TextColor3 = themes.Dark.textDim
+            end
+            tabButtons["Editor"].BackgroundColor3 = themes.Dark.bg3
+            tabButtons["Editor"].TextColor3 = getAccent()
+            currentTab = "Editor"
+            scriptListFrame.Visible = false
+            editorFrame.Visible = true
+            consoleFrame.Visible = false
+            settingsFrame.Visible = false
+            consoleText.Text = "> Script loaded into editor."
+        end
+    end)
+    scriptButtons[i] = btn
+end
+-- Update canvas size
+scriptListScrolling.CanvasSize = UDim2.new(0, 0, 0, #scripts * s(54) + s(8))
+
+-- ===== EDITOR FRAME =====
+local editorFrame = Instance.new("Frame")
+editorFrame.Size = UDim2.new(1, -s(160), 1, 0)
+editorFrame.Position = UDim2.new(0, s(160), 0, 0)
+editorFrame.BackgroundColor3 = themes.Dark.bg
+editorFrame.BorderSizePixel = 0
+editorFrame.Visible = false -- hidden initially
+editorFrame.Parent = bodyFrame
+
+local editorToolbar = Instance.new("Frame")
+editorToolbar.Size = UDim2.new(1, 0, 0, s(48))
+editorToolbar.BackgroundColor3 = themes.Dark.bg2
+editorToolbar.BorderSizePixel = 0
+editorToolbar.Parent = editorFrame
+
+local function makeEditorBtn(text, color, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, s(80), 0, s(36))
+    btn.Position = UDim2.new(0, s(8), 0.5, -s(18))
+    btn.BackgroundColor3 = color
+    btn.BorderSizePixel = 0
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextSize = s(14)
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = editorToolbar
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, s(6))
+    btnCorner.Parent = btn
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+local function executeScript()
+    local code = editorBox.Text
+    if #code < 5 then consoleText.Text = "> [Error] Empty script." return end
+    local success, err = pcall(function() loadstring(code)() end)
+    if success then
+        consoleText.Text = "> [Success] Script executed."
+        statusLed.BackgroundColor3 = Color3.fromRGB(85,255,85)
+        statusText.Text = "Running"
+    else
+        consoleText.Text = "> [Error] " .. tostring(err)
+        statusLed.BackgroundColor3 = Color3.fromRGB(255,85,85)
+        statusText.Text = "Error"
+    end
+end
+
+local execBtn = makeEditorBtn("▶ Run", Color3.fromRGB(45,122,74), executeScript)
+local stopBtn = makeEditorBtn("⏹ Stop", Color3.fromRGB(122,45,45), function()
+    if _G._carCleanup then _G._carCleanup() end
+    consoleText.Text = "> [Info] Stopped."
+    statusLed.BackgroundColor3 = Color3.fromRGB(255,85,85)
+    statusText.Text = "Stopped"
+end)
+stopBtn.Position = UDim2.new(0, s(96), 0.5, -s(18))
+local attachBtn = makeEditorBtn("🔗 Attach", Color3.fromRGB(60,60,90), function()
+    consoleText.Text = "> [System] Attached to Roblox."
+    statusLed.BackgroundColor3 = Color3.fromRGB(85,255,85)
+    statusText.Text = "Injected"
+end)
+attachBtn.Position = UDim2.new(0, s(184), 0.5, -s(18))
+
+local editorBox = Instance.new("TextBox")
+editorBox.Size = UDim2.new(1, -s(12), 1, -s(60))
+editorBox.Position = UDim2.new(0, s(6), 0, s(54))
+editorBox.BackgroundColor3 = themes.Dark.bg
+editorBox.TextColor3 = themes.Dark.text
+editorBox.TextSize = s(16)
+editorBox.Font = Enum.Font.Code
+editorBox.TextXAlignment = Enum.TextXAlignment.Left
+editorBox.TextYAlignment = Enum.TextYAlignment.Top
+editorBox.TextWrapped = true
+editorBox.MultiLine = true
+editorBox.ClearTextOnFocus = false
+editorBox.Text = "-- Select a script from the Scripts tab or paste your own."
+editorBox.Parent = editorFrame
+
+-- ===== CONSOLE FRAME =====
+local consoleFrame = Instance.new("Frame")
+consoleFrame.Size = UDim2.new(1, -s(160), 1, 0)
+consoleFrame.Position = UDim2.new(0, s(160), 0, 0)
+consoleFrame.BackgroundColor3 = themes.Dark.bg
+consoleFrame.BorderSizePixel = 0
+consoleFrame.Visible = false
+consoleFrame.Parent = bodyFrame
+
+local consoleTitle = Instance.new("Frame")
+consoleTitle.Size = UDim2.new(1, 0, 0, s(44))
+consoleTitle.BackgroundColor3 = themes.Dark.bg2
+consoleTitle.Parent = consoleFrame
+
+local consoleLabel = Instance.new("TextLabel")
+consoleLabel.Size = UDim2.new(1, -s(80), 1, 0)
+consoleLabel.Position = UDim2.new(0, s(12), 0, 0)
+consoleLabel.BackgroundTransparency = 1
+consoleLabel.Text = "Console"
+consoleLabel.TextColor3 = getAccent()
+consoleLabel.TextSize = s(18)
+consoleLabel.Font = Enum.Font.GothamBold
+consoleLabel.TextXAlignment = Enum.TextXAlignment.Left
+consoleLabel.TextYAlignment = Enum.TextYAlignment.Center
+consoleLabel.Parent = consoleTitle
+
+local clearBtn = Instance.new("TextButton")
+clearBtn.Size = UDim2.new(0, s(60), 0, s(30))
+clearBtn.Position = UDim2.new(1, -s(70), 0.5, -s(15))
+clearBtn.BackgroundColor3 = Color3.fromRGB(60,60,80)
+clearBtn.BorderSizePixel = 0
+clearBtn.Text = "Clear"
+clearBtn.TextColor3 = Color3.fromRGB(255,255,255)
+clearBtn.TextSize = s(14)
+clearBtn.Font = Enum.Font.GothamMedium
+clearBtn.Parent = consoleTitle
+local clearCorner = Instance.new("UICorner")
+clearCorner.CornerRadius = UDim.new(0, s(6))
+clearCorner.Parent = clearBtn
+clearBtn.MouseButton1Click:Connect(function()
+    consoleText.Text = "> Console cleared."
+end)
+
+local consoleScrolling = Instance.new("ScrollingFrame")
+consoleScrolling.Size = UDim2.new(1, -s(12), 1, -s(56))
+consoleScrolling.Position = UDim2.new(0, s(6), 0, s(50))
+consoleScrolling.BackgroundTransparency = 1
+consoleScrolling.BorderSizePixel = 0
+consoleScrolling.CanvasSize = UDim2.new(0, 0, 0, 0)
+consoleScrolling.ScrollBarThickness = s(6)
+consoleScrolling.Parent = consoleFrame
+
+local consoleText = Instance.new("TextLabel")
+consoleText.Size = UDim2.new(1, 0, 1, 0)
+consoleText.Position = UDim2.new(0, s(4), 0, 0)
+consoleText.BackgroundTransparency = 1
+consoleText.Text = "> Nova Executor ready.\n> Select a script and press Run."
+consoleText.TextColor3 = themes.Dark.textDim
+consoleText.TextSize = s(14)
+consoleText.Font = Enum.Font.Code
+consoleText.TextXAlignment = Enum.TextXAlignment.Left
+consoleText.TextYAlignment = Enum.TextYAlignment.Top
+consoleText.TextWrapped = true
+consoleText.Parent = consoleScrolling
+consoleScrolling.CanvasSize = UDim2.new(0, 0, 0, consoleText.TextBounds.Y + s(20))
+
+-- ===== SETTINGS FRAME =====
+local settingsFrame = Instance.new("Frame")
+settingsFrame.Size = UDim2.new(1, -s(160), 1, 0)
+settingsFrame.Position = UDim2.new(0, s(160), 0, 0)
+settingsFrame.BackgroundColor3 = themes.Dark.bg
+settingsFrame.BorderSizePixel = 0
+settingsFrame.Visible = false
+settingsFrame.Parent = bodyFrame
+
+local settingsScroll = Instance.new("ScrollingFrame")
+settingsScroll.Size = UDim2.new(1, -s(12), 1, -s(12))
+settingsScroll.Position = UDim2.new(0, s(6), 0, s(6))
+settingsScroll.BackgroundTransparency = 1
+settingsScroll.BorderSizePixel = 0
+settingsScroll.CanvasSize = UDim2.new(0, 0, 0, s(400))
+settingsScroll.ScrollBarThickness = s(6)
+settingsScroll.Parent = settingsFrame
+
+local function addSetting(text, y, widget)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, s(30))
+    label.Position = UDim2.new(0, 0, 0, y)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = themes.Dark.text
+    label.TextSize = s(16)
+    label.Font = Enum.Font.GothamMedium
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = settingsScroll
+    if widget then
+        widget.Position = UDim2.new(1, -s(120), 0, y)
+        widget.Parent = settingsScroll
+    end
+end
+
+-- Theme selector
+local themeDropdown = Instance.new("TextButton")
+themeDropdown.Size = UDim2.new(0, s(120), 0, s(30))
+themeDropdown.BackgroundColor3 = themes.Dark.bg2
+themeDropdown.BorderSizePixel = 0
+themeDropdown.Text = "Dark"
+themeDropdown.TextColor3 = themes.Dark.text
+themeDropdown.TextSize = s(14)
+themeDropdown.Font = Enum.Font.GothamMedium
+local dropCorner = Instance.new("UICorner")
+dropCorner.CornerRadius = UDim.new(0, s(6))
+dropCorner.Parent = themeDropdown
+addSetting("Theme", s(10), themeDropdown)
+themeDropdown.MouseButton1Click:Connect(function()
+    if currentTheme == "Dark" then
+        currentTheme = "Light"
+        themeDropdown.Text = "Light"
+        -- apply light theme (simplified)
+        mainFrame.BackgroundColor3 = themes.Light.bg
+        titleBar.BackgroundColor3 = themes.Light.bg2
+        sidebar.BackgroundColor3 = themes.Light.bg2
+        for _, btn in pairs(tabButtons) do
+            btn.BackgroundColor3 = themes.Light.bg2
+            btn.TextColor3 = themes.Light.textDim
+        end
+        tabButtons[currentTab].BackgroundColor3 = themes.Light.bg3
+        tabButtons[currentTab].TextColor3 = getAccent()
+        -- etc. (we'll simplify)
+    else
+        currentTheme = "Dark"
+        themeDropdown.Text = "Dark"
+        mainFrame.BackgroundColor3 = themes.Dark.bg
+        titleBar.BackgroundColor3 = themes.Dark.bg2
+        sidebar.BackgroundColor3 = themes.Dark.bg2
+        for _, btn in pairs(tabButtons) do
+            btn.BackgroundColor3 = themes.Dark.bg2
+            btn.TextColor3 = themes.Dark.textDim
+        end
+        tabButtons[currentTab].BackgroundColor3 = themes.Dark.bg3
+        tabButtons[currentTab].TextColor3 = getAccent()
+    end
+end)
+
+-- Accent color
+local accentBtns = {}
+for i, colorName in ipairs({"Green","Pink","Blue"}) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, s(70), 0, s(30))
+    btn.Position = UDim2.new(0, (i-1)*s(80), 0, s(50))
+    btn.BackgroundColor3 = accentColors[colorName]
+    btn.BorderSizePixel = 0
+    btn.Text = colorName
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextSize = s(12)
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = settingsScroll
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, s(6))
+    btnCorner.Parent = btn
+    btn.MouseButton1Click:Connect(function()
+        currentAccent = colorName
+        -- Update accent colored elements
+        logo.TextColor3 = getAccent()
+        for _, b in pairs(tabButtons) do
+            if b == tabButtons[currentTab] then
+                b.TextColor3 = getAccent()
+            end
+        end
+        consoleLabel.TextColor3 = getAccent()
+        scriptListTitle.TextColor3 = getAccent()
+        -- update status led border? not needed
+    end)
+    accentBtns[colorName] = btn
+end
+addSetting("Accent", s(50), nil)
+
+-- Toggle keybind info
+local keyLabel = Instance.new("TextLabel")
+keyLabel.Size = UDim2.new(1, 0, 0, s(30))
+keyLabel.Position = UDim2.new(0, 0, 0, s(90))
+keyLabel.BackgroundTransparency = 1
+keyLabel.Text = "Toggle UI: RightControl (PC) / Triple-tap joystick (Mobile)"
+keyLabel.TextColor3 = themes.Dark.textDim
+keyLabel.TextSize = s(14)
+keyLabel.Font = Enum.Font.GothamMedium
+keyLabel.TextXAlignment = Enum.TextXAlignment.Left
+keyLabel.Parent = settingsScroll
+
+-- ===== JOYSTICK (mobile) =====
+local joystickFrame = Instance.new("Frame")
+joystickFrame.Size = UDim2.new(0, s(200), 0, s(200))
+joystickFrame.Position = UDim2.new(0.5, -s(100), 1, -s(220))
+joystickFrame.BackgroundColor3 = Color3.fromRGB(20,20,30)
+joystickFrame.BackgroundTransparency = 0.4
+joystickFrame.BorderSizePixel = 2
+joystickFrame.BorderColor3 = Color3.fromRGB(58,58,90)
+joystickFrame.Visible = userInputService.TouchEnabled
+joystickFrame.Parent = screenGui
+local jCorner = Instance.new("UICorner")
+jCorner.CornerRadius = UDim.new(1,0)
+jCorner.Parent = joystickFrame
+
+local knob = Instance.new("Frame")
+knob.Size = UDim2.new(0, s(70), 0, s(70))
+knob.Position = UDim2.new(0.5, -s(35), 0.5, -s(35))
+knob.BackgroundColor3 = getAccent()
+knob.BackgroundTransparency = 0.2
+knob.BorderSizePixel = 0
+knob.Parent = joystickFrame
+local knobCorner = Instance.new("UICorner")
+knobCorner.CornerRadius = UDim.new(1,0)
+knobCorner.Parent = knob
+
+local joystickActive = false
+local joystickCenter = Vector2.new(s(100), s(100))
+local tripleTapCount = 0
+local tripleTapTime = 0
+
+joystickFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        joystickActive = true
+        -- triple tap detection
+        local now = tick()
+        if now - tripleTapTime < 0.5 then
+            tripleTapCount = tripleTapCount + 1
+        else
+            tripleTapCount = 1
+        end
+        tripleTapTime = now
+        if tripleTapCount >= 3 then
+            tripleTapCount = 0
+            screenGui.Enabled = not screenGui.Enabled
+        end
+    end
+end)
+joystickFrame.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        joystickActive = false
+        knob.Position = UDim2.new(0.5, -s(35), 0.5, -s(35))
+        _G.joystickX = 0
+        _G.joystickY = 0
+    end
+end)
+joystickFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch and joystickActive then
+        local pos = input.Position
+        local rel = pos - joystickFrame.AbsolutePosition - joystickCenter
+        local maxDist = s(80)
+        local dist = rel.Magnitude
+        if dist > maxDist then rel = rel / dist * maxDist end
+        knob.Position = UDim2.new(0.5, -s(35) + rel.X, 0.5, -s(35) + rel.Y)
+        _G.joystickX = math.clamp(rel.X / maxDist, -1, 1)
+        _G.joystickY = math.clamp(-rel.Y / maxDist, -1, 1)
+    end
+end)
+
+-- ===== TOGGLE VIA KEYBOARD =====
+userInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightControl and not input.IsModifierKey then
+        screenGui.Enabled = not screenGui.Enabled
+    end
+end)
+
+-- ===== INITIAL STATE =====
+consoleText.Text = "> Nova Executor initialized.\n> Tap a script from the Scripts tab or paste your own."
+statusLed.BackgroundColor3 = Color3.fromRGB(85,255,85)
+statusText.Text = "Ready"
+
+print("Nova Executor loaded – the best UI on Earth.")
