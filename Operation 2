@@ -1,0 +1,774 @@
+-- BLYET HUB // OPERATION: ONE EDITION (V2.1 PRO)
+-- TARGET EXECUTORS: DELTA, CODEX, HYDROGEN, AND ALL LEVEL 7 EXECUTORS
+
+if not game:IsLoaded() then
+    pcall(function() game.Loaded:Wait() end)
+end
+
+-- Clean old instances to prevent duplication
+if game:GetService("CoreGui"):FindFirstChild("BlyetHub_OpOne") then
+    game:GetService("CoreGui"):FindFirstChild("BlyetHub_OpOne"):Destroy()
+end
+
+--> SYSTEM SERVICES <--
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local Stats = game:GetService("Stats")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    Character = char
+    RootPart = char:WaitForChild("HumanoidRootPart")
+end)
+
+--> CONFIGURATION STATES <--
+local States = {
+    -- Visual Core (Tactical ESP)
+    MasterESP = true,
+    BoxESP = true,
+    TracerESP = false,
+    HealthBar = true,
+    HeadDot = true,
+    HostileESP = true,
+    ObjectiveESP = true,
+    
+    -- Tactical Gunplay
+    SilentAim = false,
+    Aimlock = false,
+    AimlockSmoothness = 0.1,
+    NoRecoil = false,
+    NoSpread = false,
+    InfiniteAmmo = false,
+    
+    -- Movement & Anti-Cheat Bypasses
+    BypassWalkspeed = false,
+    SpeedValue = 22,
+    Noclip = false,
+    AntiKnock = true,
+    FastBreach = true,
+    
+    -- Skybox / Atmosphere
+    NoFog = true,
+    Fullbright = true
+}
+
+--------------------------------------------------------------------------------
+-- OPERATION: ONE SPECIFIC ANTI-CHEAT & GUN MODIFICATION ENGINE
+--------------------------------------------------------------------------------
+local RawMeta = getrawmetatable(game)
+if RawMeta and setreadonly then
+    setreadonly(RawMeta, false)
+    local OldIndex = RawMeta.__index
+    local OldNamecall = RawMeta.__namecall
+    
+    -- Spoofing properties to dodge client checks
+    RawMeta.__index = newcclosure(function(Self, Key)
+        if not checkcaller() then
+            if Self:IsA("Humanoid") then
+                if Key == "WalkSpeed" and States.BypassWalkspeed then
+                    return 16 -- Report vanilla speed back to client scripts
+                end
+            end
+            if States.AntiKnock then
+                if Self:IsA("BodyVelocity") or Self:IsA("LinearVelocity") or Self:IsA("VectorForce") then
+                    if Key == "Velocity" or Key == "AssemblyLinearVelocity" then
+                        return Vector3.zero
+                    end
+                end
+            end
+        end
+        return OldIndex(Self, Key)
+    end)
+    
+    -- Suppress flag triggers & network telemetry
+    RawMeta.__namecall = newcclosure(function(Self, ...)
+        local Method = getnamecallmethod()
+        if not checkcaller() then
+            if Method == "FireServer" then
+                local Name = Self.Name:lower()
+                if Name:find("cheat") or Name:find("detection") or Name:find("ban") or Name:find("kick") or Name:find("teleport") then
+                    return nil -- Intercept and block client flags
+                end
+            end
+        end
+        return OldNamecall(Self, ...)
+    end)
+    
+    setreadonly(RawMeta, true)
+end
+
+-- Garbage Collector Scanning (For Real-time Gun State Manipulation)
+task.spawn(function()
+    while task.wait(1.5) do
+        if getgc then
+            for _, obj in ipairs(getgc(true)) do
+                if type(obj) == "table" then
+                    -- Detect weapons by identifying structural property patterns
+                    if rawget(obj, "Recoil") or rawget(obj, "RecoilControl") or rawget(obj, "Spread") then
+                        if States.NoRecoil then
+                            rawset(obj, "Recoil", 0)
+                            rawset(obj, "RecoilControl", 0)
+                            rawset(obj, "Kickback", 0)
+                            rawset(obj, "VerticalRecoil", 0)
+                            rawset(obj, "HorizontalRecoil", 0)
+                        end
+                        if States.NoSpread then
+                            rawset(obj, "Spread", 0)
+                            rawset(obj, "BaseSpread", 0)
+                            rawset(obj, "MaxSpread", 0)
+                            rawset(obj, "SpreadIncrement", 0)
+                        end
+                        if States.InfiniteAmmo then
+                            rawset(obj, "Ammo", 999)
+                            rawset(obj, "ClipSize", 999)
+                            rawset(obj, "StoredAmmo", 999)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- HIGH-PERFORMANCE TACTICAL DRAWING ESP
+--------------------------------------------------------------------------------
+local TargetDrawings = {}
+
+local function CreateTacticalESP(TargetPlayer)
+    if TargetPlayer == LocalPlayer then return end
+    
+    local ESP = {
+        BoxOutline = Drawing.new("Square"),
+        Box = Drawing.new("Square"),
+        Tracer = Drawing.new("Line"),
+        HealthOutline = Drawing.new("Line"),
+        HealthBar = Drawing.new("Line"),
+        HeadCircle = Drawing.new("Circle"),
+        Label = Drawing.new("Text")
+    }
+    TargetDrawings[TargetPlayer] = ESP
+    
+    -- Design Config
+    ESP.BoxOutline.Thickness = 3
+    ESP.BoxOutline.Color = Color3.fromRGB(0, 0, 0)
+    ESP.BoxOutline.Filled = false
+    ESP.Box.Thickness = 1.5
+    ESP.Box.Filled = false
+    
+    ESP.Tracer.Thickness = 1.2
+    
+    ESP.HealthOutline.Thickness = 3
+    ESP.HealthOutline.Color = Color3.fromRGB(0, 0, 0)
+    ESP.HealthBar.Thickness = 1.5
+    
+    ESP.HeadCircle.Radius = 4
+    ESP.HeadCircle.Filled = true
+    ESP.HeadCircle.Color = Color3.fromRGB(255, 30, 30)
+    
+    ESP.Label.Size = 11
+    ESP.Label.Center = true
+    ESP.Label.Outline = true
+    ESP.Label.Color = Color3.fromRGB(255, 255, 255)
+    
+    local Connection
+    Connection = RunService.RenderStepped:Connect(function()
+        local Char = TargetPlayer.Character
+        local Root = Char and Char:FindFirstChild("HumanoidRootPart")
+        local Hum = Char and Char:FindFirstChildOfClass("Humanoid")
+        
+        if not Char or not Root or not Hum or not States.MasterESP or Hum.Health <= 0 then
+            for _, draw in pairs(ESP) do draw.Visible = false end
+            if not TargetPlayer.Parent then
+                for _, draw in pairs(ESP) do draw:Destroy() end
+                TargetDrawings[TargetPlayer] = nil
+                Connection:Disconnect()
+            end
+            return
+        end
+        
+        local ScreenPos, OnScreen = Camera:WorldToViewportPoint(Root.Position)
+        
+        if OnScreen then
+            local TopPos = Camera:WorldToViewportPoint(Root.Position + Vector3.new(0, 3, 0))
+            local BottomPos = Camera:WorldToViewportPoint(Root.Position - Vector3.new(0, 3.5, 0))
+            local Height = math.abs(TopPos.Y - BottomPos.Y)
+            local Width = Height / 1.5
+            
+            -- Hostile vs Ally Check for Operation: One Team Layouts
+            local IsHostile = true
+            if TargetPlayer.Team and LocalPlayer.Team and TargetPlayer.Team == LocalPlayer.Team then
+                IsHostile = false
+            end
+            
+            local ColorTheme = IsHostile and Color3.fromRGB(255, 30, 70) or Color3.fromRGB(0, 230, 118)
+            
+            -- Struct Box
+            if States.BoxESP then
+                ESP.BoxOutline.Size = Vector2.new(Width, Height)
+                ESP.BoxOutline.Position = Vector2.new(ScreenPos.X - Width/2, ScreenPos.Y - Height/2)
+                ESP.BoxOutline.Visible = true
+                
+                ESP.Box.Size = Vector2.new(Width, Height)
+                ESP.Box.Position = ESP.BoxOutline.Position
+                ESP.Box.Color = ColorTheme
+                ESP.Box.Visible = true
+            else
+                ESP.BoxOutline.Visible = false
+                ESP.Box.Visible = false
+            end
+            
+            -- Directional Lines
+            if States.TracerESP then
+                ESP.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                ESP.Tracer.To = Vector2.new(ScreenPos.X, ScreenPos.Y + Height/2)
+                ESP.Tracer.Color = ColorTheme
+                ESP.Tracer.Visible = true
+            else
+                ESP.Tracer.Visible = false
+            end
+            
+            -- Tactical Health Metric
+            if States.HealthBar then
+                local HealthPct = math.clamp(Hum.Health / Hum.MaxHealth, 0, 1)
+                local BarHeight = Height * HealthPct
+                
+                ESP.HealthOutline.From = Vector2.new(ScreenPos.X - Width/2 - 6, ScreenPos.Y + Height/2)
+                ESP.HealthOutline.To = Vector2.new(ScreenPos.X - Width/2 - 6, ScreenPos.Y - Height/2)
+                ESP.HealthOutline.Visible = true
+                
+                ESP.HealthBar.From = Vector2.new(ScreenPos.X - Width/2 - 6, ScreenPos.Y + Height/2)
+                ESP.HealthBar.To = Vector2.new(ScreenPos.X - Width/2 - 6, (ScreenPos.Y + Height/2) - BarHeight)
+                ESP.HealthBar.Color = Color3.fromHSV(HealthPct * 0.35, 1, 1)
+                ESP.HealthBar.Visible = true
+            else
+                ESP.HealthOutline.Visible = false
+                ESP.HealthBar.Visible = false
+            end
+            
+            -- Target Marker
+            local Head = Char:FindFirstChild("Head")
+            if States.HeadDot and Head then
+                local HeadPos, HeadOnScreen = Camera:WorldToViewportPoint(Head.Position)
+                if HeadOnScreen then
+                    ESP.HeadCircle.Position = Vector2.new(HeadPos.X, HeadPos.Y)
+                    ESP.HeadCircle.Visible = true
+                else
+                    ESP.HeadCircle.Visible = false
+                end
+            else
+                ESP.HeadCircle.Visible = false
+            end
+            
+            -- Dynamic Data Strings
+            local Distance = math.floor((RootPart.Position - Root.Position).Magnitude)
+            ESP.Label.Position = Vector2.new(ScreenPos.X, ScreenPos.Y - Height/2 - 16)
+            ESP.Label.Text = string.format("%s - %dM", TargetPlayer.DisplayName:upper(), Distance)
+            ESP.Label.Visible = true
+        else
+            for _, draw in pairs(ESP) do draw.Visible = false end
+        end
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do CreateTacticalESP(p) end
+Players.PlayerAdded:Connect(CreateTacticalESP)
+
+--------------------------------------------------------------------------------
+-- ENVIRONMENT SCANNER (OBJECTS, INTERACTIVES & HOSTILE NPCS)
+--------------------------------------------------------------------------------
+local ActiveObjectiveDrawings = {}
+
+local function CreateObjectiveESP(Instance, DisplayName, ThemeColor)
+    if ActiveObjectiveDrawings[Instance] then return end
+    
+    local ESP = {
+        Text = Drawing.new("Text")
+    }
+    ActiveObjectiveDrawings[Instance] = ESP
+    
+    ESP.Text.Size = 11
+    ESP.Text.Center = true
+    ESP.Text.Outline = true
+    ESP.Text.Color = ThemeColor
+    ESP.Text.Visible = false
+    
+    local Connection
+    Connection = RunService.RenderStepped:Connect(function()
+        if not Instance or not Instance.Parent or not States.ObjectiveESP then
+            ESP.Text.Visible = false
+            if not Instance.Parent then
+                ESP.Text:Destroy()
+                ActiveObjectiveDrawings[Instance] = nil
+                Connection:Disconnect()
+            end
+            return
+        end
+        
+        local Part = Instance:IsA("BasePart") and Instance or Instance:FindFirstChildOfClass("BasePart") or Instance.PrimaryPart
+        if Part then
+            local ScreenPos, OnScreen = Camera:WorldToViewportPoint(Part.Position)
+            if OnScreen then
+                local Distance = math.floor((RootPart.Position - Part.Position).Magnitude)
+                ESP.Text.Position = Vector2.new(ScreenPos.X, ScreenPos.Y)
+                ESP.Text.Text = string.format("[%s (%dM)]", DisplayName, Distance)
+                ESP.Text.Visible = true
+            else
+                ESP.Text.Visible = false
+            end
+        else
+            ESP.Text.Visible = false
+        end
+    end)
+end
+
+local function ScanTacticalWorld()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        local name = obj.Name:lower()
+        -- Capture doors, objectives, bomb devices, Intel, and hostages in Operation: One
+        if (name:find("intel") or name:find("laptop") or name:find("document")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+            CreateObjectiveESP(obj, "Tactical Intel", Color3.fromRGB(0, 191, 255))
+        elseif (name:find("bomb") or name:find("device") or name:find("defuse")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+            CreateObjectiveESP(obj, "Secure Target", Color3.fromRGB(255, 30, 30))
+        elseif (name:find("hostage") or name:find("civilian")) and (obj:IsA("Model") or obj:IsA("BasePart")) then
+            CreateObjectiveESP(obj, "Hostage Rescue", Color3.fromRGB(255, 183, 77))
+        elseif (name:find("door") or name:find("breach") or name:find("gate")) and obj:IsA("Model") then
+            CreateObjectiveESP(obj, "Breach Entry", Color3.fromRGB(150, 150, 150))
+        end
+    end
+end
+
+task.spawn(ScanTacticalWorld)
+workspace.DescendantAdded:Connect(function(desc)
+    task.wait(0.5)
+    local name = desc.Name:lower()
+    if (name:find("intel") or name:find("laptop") or name:find("document")) then
+        CreateObjectiveESP(desc, "Tactical Intel", Color3.fromRGB(0, 191, 255))
+    elseif (name:find("bomb") or name:find("device") or name:find("defuse")) then
+        CreateObjectiveESP(desc, "Secure Target", Color3.fromRGB(255, 30, 30))
+    elseif (name:find("hostage") or name:find("civilian")) then
+        CreateObjectiveESP(desc, "Hostage Rescue", Color3.fromRGB(255, 183, 77))
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- AIMBOT & SILENT AIM ENGINE
+--------------------------------------------------------------------------------
+local function GetClosestHostileToMouse()
+    local Target = nil
+    local Dist = math.huge
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            -- Verify team status to prevent team-killing
+            local IsHostile = true
+            if p.Team and LocalPlayer.Team and p.Team == LocalPlayer.Team then
+                IsHostile = false
+            end
+            
+            if IsHostile then
+                local Hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if Hum and Hum.Health > 0 then
+                    local ScreenPos, OnScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                    if OnScreen then
+                        local MouseDist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(ScreenPos.X, ScreenPos.Y)).Magnitude
+                        if MouseDist < Dist then
+                            Target = p.Character:FindFirstChild("Head") or p.Character.HumanoidRootPart
+                            Dist = MouseDist
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return Target
+end
+
+-- Active Aimlock Tracking Loop
+RunService.RenderStepped:Connect(function()
+    if States.Aimlock then
+        local LockTarget = GetClosestHostileToMouse()
+        if LockTarget then
+            local CurrentLook = Camera.CFrame
+            local TargetLook = CFrame.new(Camera.CFrame.Position, LockTarget.Position)
+            Camera.CFrame = CurrentLook:Lerp(TargetLook, States.AimlockSmoothness)
+        end
+    end
+end)
+
+-- Silent Aim Interceptor Hook
+local OldNamecall
+OldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(Self, ...)
+    local Method = getnamecallmethod()
+    local Args = {...}
+    
+    if Method == "FireServer" and States.SilentAim then
+        -- Intercept generic bullet fire remote pathways to redirect hits to target head
+        if Self.Name == "Shoot" or Self.Name == "Hit" or Self.Name == "Fire" then
+            local LockTarget = GetClosestHostileToMouse()
+            if LockTarget then
+                -- Spoof hit position vectors and targets inside remote arguments
+                for i, arg in ipairs(Args) do
+                    if typeof(arg) == "Vector3" then
+                        Args[i] = LockTarget.Position
+                    elseif typeof(arg) == "Instance" and (arg:IsA("BasePart") or arg:IsA("Model")) then
+                        Args[i] = LockTarget
+                    end
+                end
+                return OldNamecall(Self, unpack(Args))
+            end
+        end
+    end
+    return OldNamecall(Self, ...)
+end))
+
+--------------------------------------------------------------------------------
+-- PHYSICAL COMBAT LOOP & AMBIENT FILTERS
+--------------------------------------------------------------------------------
+RunService.Heartbeat:Connect(function()
+    if not Character or not RootPart then return end
+    
+    local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+    if not Humanoid then return end
+    
+    if States.BypassWalkspeed then
+        Humanoid.WalkSpeed = States.SpeedValue
+    end
+    
+    if States.Noclip then
+        for _, obj in ipairs(Character:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.CanCollide then
+                obj.CanCollide = false
+            end
+        end
+    end
+    
+    if States.FastBreach then
+        -- Zero-out loading progress wait time triggers across local proximity scripts
+        for _, prompt in ipairs(workspace:GetDescendants()) do
+            if prompt:IsA("ProximityPrompt") then
+                prompt.HoldDuration = 0
+            end
+        end
+    end
+end)
+
+-- Render updates
+RunService.RenderStepped:Connect(function()
+    if States.NoFog then
+        Lighting.FogStart = 9e9
+        Lighting.FogEnd = 9e9
+    end
+    if States.Fullbright then
+        Lighting.Brightness = 2.5
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- PREMIUM ACRYLIC DUAL-PANEL HUD
+--------------------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BlyetHub_OpOne"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999999
+ScreenGui.Parent = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+
+-- Float Expand Icon
+local ToggleWidget = Instance.new("ImageButton")
+ToggleWidget.Name = "ToggleWidget"
+ToggleWidget.Size = UDim2.new(0, 48, 0, 48)
+ToggleWidget.Position = UDim2.new(0, 25, 0.5, -24)
+ToggleWidget.BackgroundColor3 = Color3.fromRGB(13, 10, 18)
+ToggleWidget.BorderSizePixel = 0
+ToggleWidget.Parent = ScreenGui
+
+local WidgetCorner = Instance.new("UICorner")
+WidgetCorner.CornerRadius = UDim.new(1, 0)
+WidgetCorner.Parent = ToggleWidget
+
+local WidgetStroke = Instance.new("UIStroke")
+WidgetStroke.Thickness = 1.5
+WidgetStroke.Color = Color3.fromRGB(138, 43, 226)
+WidgetStroke.Parent = ToggleWidget
+
+local WidgetLabel = Instance.new("TextLabel")
+WidgetLabel.Size = UDim2.new(1, 0, 1, 0)
+WidgetLabel.BackgroundTransparency = 1
+WidgetLabel.Text = "B"
+WidgetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WidgetLabel.Font = Enum.Font.GothamBold
+WidgetLabel.TextSize = 22
+WidgetLabel.Parent = ToggleWidget
+
+-- Canvas Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 620, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -310, 0.5, -180)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 8, 14)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 1.5
+MainStroke.Color = Color3.fromRGB(35, 28, 45)
+MainStroke.Parent = MainFrame
+
+-- Dragging Engine
+local Dragging, DragStart, StartPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        Dragging = true
+        DragStart = input.Position
+        StartPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then Dragging = false end
+        end)
+    end
+end)
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if Dragging then
+            local Delta = input.Position - DragStart
+            MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        end
+    end
+end)
+
+ToggleWidget.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Sidebar Layout
+local LeftPanel = Instance.new("Frame")
+LeftPanel.Size = UDim2.new(0, 190, 1, 0)
+LeftPanel.BackgroundColor3 = Color3.fromRGB(13, 10, 18)
+LeftPanel.BorderSizePixel = 0
+LeftPanel.Parent = MainFrame
+
+local LeftCorner = Instance.new("UICorner")
+LeftCorner.CornerRadius = UDim.new(0, 12)
+LeftCorner.Parent = LeftPanel
+
+local LogoText = Instance.new("TextLabel")
+LogoText.Size = UDim2.new(1, 0, 0, 50)
+LogoText.Position = UDim2.new(0, 18, 0, 8)
+LogoText.BackgroundTransparency = 1
+LogoText.Text = "BLYET HUB v2.1"
+LogoText.TextColor3 = Color3.fromRGB(138, 43, 226)
+LogoText.Font = Enum.Font.GothamBold
+LogoText.TextSize = 15
+LogoText.TextXAlignment = Enum.TextXAlignment.Left
+LogoText.Parent = LeftPanel
+
+-- System Diagnostic Panel
+local DiagnosticPanel = Instance.new("Frame")
+DiagnosticPanel.Size = UDim2.new(1, -24, 0, 65)
+DiagnosticPanel.Position = UDim2.new(0, 12, 1, -80)
+DiagnosticPanel.BackgroundColor3 = Color3.fromRGB(18, 14, 25)
+DiagnosticPanel.BorderSizePixel = 0
+DiagnosticPanel.Parent = LeftPanel
+
+local DiagCorner = Instance.new("UICorner")
+DiagCorner.CornerRadius = UDim.new(0, 8)
+DiagCorner.Parent = DiagnosticPanel
+
+local DiagText = Instance.new("TextLabel")
+DiagText.Size = UDim2.new(1, -16, 1, -12)
+DiagText.Position = UDim2.new(0, 8, 0, 6)
+DiagText.BackgroundTransparency = 1
+DiagText.Text = "FPS: Init...\nPing: Init...\nOpTeam: Secure"
+DiagText.TextColor3 = Color3.fromRGB(160, 155, 175)
+DiagText.Font = Enum.Font.GothamSemibold
+DiagText.TextSize = 10
+DiagText.LineHeight = 1.3
+DiagText.TextXAlignment = Enum.TextXAlignment.Left
+DiagText.Parent = DiagnosticPanel
+
+task.spawn(function()
+    while task.wait(1) do
+        if DiagnosticPanel and DiagnosticPanel.Parent then
+            local FPS = math.round(1 / RunService.RenderStepped:Wait())
+            local Ping = math.round(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            local TeamName = (LocalPlayer.Team and LocalPlayer.Team.Name:upper()) or "ASSASSIN"
+            DiagText.Text = string.format("FPS: %d\nPing: %dms\nTeam: %s", FPS, Ping, TeamName)
+        end
+    end
+end)
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -24, 1, -160)
+TabContainer.Position = UDim2.new(0, 12, 0, 60)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = LeftPanel
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.Padding = UDim.new(0, 6)
+TabListLayout.Parent = TabContainer
+
+-- Render Space Content
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -190, 1, 0)
+ContentFrame.Position = UDim2.new(0, 190, 0, 0)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Position = UDim2.new(1, -35, 0, 15)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "✕"
+CloseButton.TextColor3 = Color3.fromRGB(150, 145, 160)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
+CloseButton.Parent = ContentFrame
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local PageList = Instance.new("Frame")
+PageList.Size = UDim2.new(1, -30, 1, -70)
+PageList.Position = UDim2.new(0, 15, 0, 55)
+PageList.BackgroundTransparency = 1
+PageList.Parent = ContentFrame
+
+local Grid = Instance.new("UIGridLayout")
+Grid.CellSize = UDim2.new(0, 190, 0, 36)
+Grid.CellPadding = UDim2.new(0, 10, 0, 10)
+Grid.Parent = PageList
+
+--------------------------------------------------------------------------------
+-- INTERFACE LAYER COMPONENT GENERATORS
+--------------------------------------------------------------------------------
+local tabs = {}
+local function CreatePageButton(name, order)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 32)
+    button.BackgroundColor3 = Color3.fromRGB(15, 12, 20)
+    button.BackgroundTransparency = 1
+    button.Text = "   " .. name
+    button.TextColor3 = Color3.fromRGB(150, 145, 160)
+    button.Font = Enum.Font.GothamSemibold
+    button.TextSize = 11
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.LayoutOrder = order
+    button.Parent = TabContainer
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = button
+    
+    button.MouseButton1Click:Connect(function()
+        for _, otherBtn in ipairs(TabContainer:GetChildren()) do
+            if otherBtn:IsA("TextButton") then
+                otherBtn.BackgroundTransparency = 1
+                otherBtn.TextColor3 = Color3.fromRGB(150, 145, 160)
+            end
+        end
+        button.BackgroundTransparency = 0
+        button.BackgroundColor3 = Color3.fromRGB(18, 15, 24)
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
+        for _, item in ipairs(PageList:GetChildren()) do
+            if not item:IsA("UIGridLayout") then item:Destroy() end
+        end
+        tabs[name]()
+    end)
+end
+
+local function AddToggle(text, configKey)
+    local btn = Instance.new("TextButton")
+    btn.BackgroundColor3 = Color3.fromRGB(16, 13, 22)
+    btn.Text = "  " .. text
+    btn.TextColor3 = Color3.fromRGB(150, 145, 160)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 10
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Parent = PageList
+    
+    local cr = Instance.new("UICorner") cr.CornerRadius = UDim.new(0, 5) cr.Parent = btn
+    local stroke = Instance.new("UIStroke") stroke.Thickness = 1 stroke.Color = Color3.fromRGB(30, 26, 38) stroke.Parent = btn
+    
+    local indicator = Instance.new("Frame")
+    indicator.Size = UDim2.new(0, 12, 0, 12)
+    indicator.Position = UDim2.new(1, -22, 0.5, -6)
+    indicator.BackgroundColor3 = States[configKey] and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(30, 26, 38)
+    indicator.Parent = btn
+    local ticr = Instance.new("UICorner") ticr.CornerRadius = UDim.new(1, 0) ticr.Parent = indicator
+
+    btn.MouseButton1Click:Connect(function()
+        States[configKey] = not States[configKey]
+        indicator.BackgroundColor3 = States[configKey] and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(30, 26, 38)
+    end)
+end
+
+--------------------------------------------------------------------------------
+-- RUNTIME MENU BINDINGS (TABS)
+--------------------------------------------------------------------------------
+tabs["Dashboard"] = function()
+    AddToggle("Anti-Knock Bypass", "AntiKnock")
+    AddToggle("Insta-Breach / Interact", "FastBreach")
+    AddToggle("Clear Visual Fog", "NoFog")
+    AddToggle("Fullbright Preset", "Fullbright")
+end
+
+tabs["Gun Modifiers"] = function()
+    AddToggle("Silent Headshot Aim", "SilentAim")
+    AddToggle("Lock-on Aimlock", "Aimlock")
+    AddToggle("Enforce Zero Recoil", "NoRecoil")
+    AddToggle("Enforce Zero Spread", "NoSpread")
+    AddToggle("Uncapped Reserve Ammo", "InfiniteAmmo")
+end
+
+tabs["Combat Visuals"] = function()
+    AddToggle("Master ESP Grid", "MasterESP")
+    AddToggle("Render Hitbox Boxes", "BoxESP")
+    AddToggle("Render Health Profiles", "HealthBar")
+    AddToggle("Identify Head Markers", "HeadDot")
+end
+
+tabs["Tactical World ESP"] = function()
+    AddToggle("Render Hostile ESP", "HostileESP")
+    AddToggle("Objective / Intel ESP", "ObjectiveESP")
+    AddToggle("Target Direction Lines", "TracerESP")
+end
+
+tabs["Movement Core"] = function()
+    AddToggle("Bypassed Walk Speed", "BypassWalkspeed")
+    AddToggle("No-Clip Walls", "Noclip")
+end
+
+-- Draw out Category buttons
+CreatePageButton("Dashboard", 1)
+CreatePageButton("Gun Modifiers", 2)
+CreatePageButton("Combat Visuals", 3)
+CreatePageButton("Tactical World ESP", 4)
+CreatePageButton("Movement Core", 5)
+
+-- Autoload defaults
+task.spawn(function()
+    task.wait(0.2)
+    local def = TabContainer:FindFirstChild("Dashboard")
+    if def then
+        def.BackgroundTransparency = 0
+        def.BackgroundColor3 = Color3.fromRGB(18, 15, 24)
+        def.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tabs["Dashboard"]()
+    end
+end)
