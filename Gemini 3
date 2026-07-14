@@ -1,0 +1,634 @@
+-- BLYET HUB // VIOLENCE DISTRICT EDITION
+-- FULL COMPLETE PRODUCTION RUNTIME
+
+if not game:IsLoaded() then
+    pcall(function() game.Loaded:Wait() end)
+end
+
+-- Cleanup prior instances to avoid overlapping thread contexts
+if game:GetService("CoreGui"):FindFirstChild("blyet_hub") then
+    game:GetService("CoreGui"):FindFirstChild("blyet_hub"):Destroy()
+end
+
+--> Core System Wrappers <--
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local playerCharacter = player.Character or player.CharacterAdded:Wait()
+local playerHumanoidRootPart = playerCharacter:FindFirstChild("HumanoidRootPart") or playerCharacter:WaitForChild("HumanoidRootPart")
+
+player.CharacterAdded:Connect(function(char)
+    playerCharacter = char
+    playerHumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+end)
+
+--> Active Feature Configurations <--
+local Features = {
+    AutoParry = false,
+    Aimlock = false,
+    GodMode = false,
+    AntiKnock = false,
+    NoFog = false,
+    Fullbright = false,
+    PlayerESP = false,
+    ObjectiveESP = false,
+    InfiniteStamina = false,
+    InstantInteraction = false,
+    KillAura = false,
+    KillAuraRange = 15,
+    ActiveTab = "Dashboard"
+}
+
+--> Anti-Knockback Hook Engine <--
+local mt = getrawmetatable(game)
+if mt and setreadonly then
+    setreadonly(mt, false)
+    local oldIndex = mt.__index
+    local oldNewIndex = mt.__newindex
+    
+    mt.__newindex = newcclosure(function(self, key, value)
+        if not checkcaller() and Features.AntiKnock then
+            if self:IsA("BodyVelocity") or self:IsA("LinearVelocity") or self:IsA("VectorForce") then
+                return
+            end
+            if self.Name == "HumanoidRootPart" and (key == "Velocity" or key == "AssemblyLinearVelocity") then
+                return
+            end
+        end
+        return oldNewIndex(self, key, value)
+    end)
+    setreadonly(mt, true)
+end
+
+--------------------------------------------------------------------------------
+-- FEATURE FUNCTIONS & ACTIVE HEARTHBEAT LOOPS
+--------------------------------------------------------------------------------
+
+-- Auto Parry Trigger
+local function executeParry()
+    local tool = playerCharacter:FindFirstChildOfClass("Tool")
+    if tool then
+        tool:Activate()
+        -- Directly query network triggers to execute dagger blocking state instantly
+        local blockRemote = tool:FindFirstChild("Block") or tool:FindFirstChild("Parry") or tool:FindFirstChild("Remote")
+        if blockRemote and blockRemote:IsA("RemoteEvent") then
+            blockRemote:FireServer(true)
+        end
+    end
+end
+
+-- Aimlock Target Acquisition
+local function getClosestPlayer()
+    local target = nil
+    local maxDist = math.huge
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChildOfClass("Humanoid") then
+            if p.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                local dist = (playerHumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                if dist < maxDist then
+                    target = p.Character.HumanoidRootPart
+                    maxDist = dist
+                end
+            end
+        end
+    end
+    return target
+end
+
+-- Core Step Integration
+RunService.Heartbeat:Connect(function()
+    if not playerCharacter or not playerHumanoidRootPart then return end
+    
+    -- Auto Parry Detection Matrix
+    if Features.AutoParry then
+        for _, enemy in ipairs(Players:GetPlayers()) do
+            if enemy ~= player and enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart") then
+                local enemyRoot = enemy.Character.HumanoidRootPart
+                local distance = (playerHumanoidRootPart.Position - enemyRoot.Position).Magnitude
+                
+                if distance < 12 then
+                    local enemyHum = enemy.Character:FindFirstChildOfClass("Humanoid")
+                    local animator = enemyHum and enemyHum:FindFirstChildOfClass("Animator")
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            local animName = string.lower(track.Animation.Name or "")
+                            if string.find(animName, "slash") or string.find(animName, "swing") or string.find(animName, "attack") then
+                                executeParry()
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    -- Infinite Stamina & Speed Run-checks
+    if Features.InfiniteStamina then
+        local myHum = playerCharacter:FindFirstChildOfClass("Humanoid")
+        if myHum then
+            -- Reset classic stamina variables located in either local scripts or player attributes
+            player:SetAttribute("Stamina", 100)
+            player:SetAttribute("SprintStamina", 100)
+            local stamObj = playerCharacter:FindFirstChild("Stamina") or player:FindFirstChild("Stamina")
+            if stamObj and stamObj:IsA("ValueBase") then
+                stamObj.Value = 100
+            end
+        end
+    end
+
+    -- Instant Interaction Bypass (Speeds up repair/unlock hold triggers)
+    if Features.InstantInteraction then
+        for _, desc in ipairs(workspace:GetDescendants()) do
+            if desc:IsA("ProximityPrompt") then
+                desc.HoldDuration = 0
+            end
+        end
+    end
+
+    -- Kill Aura Failsafe Loop
+    if Features.KillAura then
+        local activeTool = playerCharacter:FindFirstChildOfClass("Tool")
+        if activeTool then
+            local enemyTarget = getClosestPlayer()
+            if enemyTarget then
+                local distance = (playerHumanoidRootPart.Position - enemyTarget.Position).Magnitude
+                if distance <= Features.KillAuraRange then
+                    activeTool:Activate()
+                    local touchInterest = activeTool:FindFirstChildWhichIsA("TouchTransmitter", true)
+                    if touchInterest and firetouchinterest then
+                        firetouchinterest(touchInterest.Parent, enemyTarget, 0)
+                        firetouchinterest(touchInterest.Parent, enemyTarget, 1)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Aimlock Camera Render Step
+RunService.RenderStepped:Connect(function()
+    if Features.Aimlock then
+        local target = getClosestPlayer()
+        if target then
+            local cam = workspace.CurrentCamera
+            cam.CFrame = CFrame.new(cam.CFrame.Position, target.Position)
+        end
+    end
+end)
+
+-- God Mode Check (Force Local HP updates)
+task.spawn(function()
+    while task.wait(0.1) do
+        if Features.GodMode and playerCharacter then
+            local hum = playerCharacter:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
+                hum.Health = hum.MaxHealth
+            end
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- ENVIRONMENTAL MODIFICATIONS
+--------------------------------------------------------------------------------
+local originalFogStart = Lighting.FogStart
+local originalFogEnd = Lighting.FogEnd
+local originalBrightness = Lighting.Brightness
+local originalAmbient = Lighting.Ambient
+
+RunService.Heartbeat:Connect(function()
+    if Features.NoFog then
+        Lighting.FogStart = 100000
+        Lighting.FogEnd = 100000
+    else
+        Lighting.FogStart = originalFogStart
+        Lighting.FogEnd = originalFogEnd
+    end
+    
+    if Features.Fullbright then
+        Lighting.Brightness = 2
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    else
+        Lighting.Brightness = originalBrightness
+        Lighting.Ambient = originalAmbient
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- VISUAL RENDER ENGINE (ESP BOXES)
+--------------------------------------------------------------------------------
+local function drawESP(p)
+    if p == player then return end
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Color3.fromRGB(138, 43, 226)
+    box.Thickness = 1.5
+    box.Filled = false
+    
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") or not Features.PlayerESP then
+            box.Visible = false
+            if not p.Parent then
+                box:Destroy()
+                connection:Disconnect()
+            end
+            return
+        end
+        
+        local root = p.Character.HumanoidRootPart
+        local rootPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(root.Position)
+        
+        if onScreen then
+            local top, _ = workspace.CurrentCamera:WorldToViewportPoint(root.Position + Vector3.new(0, 3, 0))
+            local bottom, _ = workspace.CurrentCamera:WorldToViewportPoint(root.Position - Vector3.new(0, 3.5, 0))
+            local height = math.abs(top.Y - bottom.Y)
+            local width = height / 1.5
+            
+            box.Size = Vector2.new(width, height)
+            box.Position = Vector2.new(rootPos.X - width / 2, rootPos.Y - height / 2)
+            box.Visible = true
+        else
+            box.Visible = false
+        end
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do drawESP(p) end
+Players.PlayerAdded:Connect(drawESP)
+
+--------------------------------------------------------------------------------
+-- ADVANCED DARK MODERN GUI CONSTRUCTOR
+--------------------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "blyet_hub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999999
+ScreenGui.Parent = (gethui and gethui()) or CoreGui or player:WaitForChild("PlayerGui")
+
+-- Mini Floater Toggle Widget
+local ToggleWidget = Instance.new("ImageButton")
+ToggleWidget.Name = "ToggleWidget"
+ToggleWidget.Size = UDim2.new(0, 45, 0, 45)
+ToggleWidget.Position = UDim2.new(0, 15, 0.5, -22)
+ToggleWidget.BackgroundColor3 = Color3.fromRGB(13, 10, 18)
+ToggleWidget.BorderSizePixel = 0
+ToggleWidget.Parent = ScreenGui
+
+local WidgetCorner = Instance.new("UICorner")
+WidgetCorner.CornerRadius = UDim.new(1, 0)
+WidgetCorner.Parent = ToggleWidget
+
+local WidgetStroke = Instance.new("UIStroke")
+WidgetStroke.Thickness = 1.5
+WidgetStroke.Color = Color3.fromRGB(138, 43, 226)
+WidgetStroke.Parent = ToggleWidget
+
+local WidgetLabel = Instance.new("TextLabel")
+WidgetLabel.Size = UDim2.new(1, 0, 1, 0)
+WidgetLabel.BackgroundTransparency = 1
+WidgetLabel.Text = "B"
+WidgetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WidgetLabel.Font = Enum.Font.GothamBold
+WidgetLabel.TextSize = 20
+WidgetLabel.Parent = ToggleWidget
+
+-- Main Canvas Container
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 580, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -290, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 8, 14)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 1.2
+MainStroke.Color = Color3.fromRGB(30, 26, 38)
+MainStroke.Parent = MainFrame
+
+-- Dragging Functionality
+local dragToggle, dragStart, startPos
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    TweenService:Create(MainFrame, TweenInfo.new(0.08), {Position = position}):Play()
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggle = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragToggle = false end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if dragToggle then updateInput(input) end
+    end
+end)
+
+ToggleWidget.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+--------------------------------------------------------------------------------
+-- LEFT SIDE PANEL
+--------------------------------------------------------------------------------
+local LeftPanel = Instance.new("Frame")
+LeftPanel.Size = UDim2.new(0, 180, 1, 0)
+LeftPanel.BackgroundColor3 = Color3.fromRGB(13, 11, 18)
+LeftPanel.BorderSizePixel = 0
+LeftPanel.Parent = MainFrame
+
+local LeftCorner = Instance.new("UICorner")
+LeftCorner.CornerRadius = UDim.new(0, 8)
+LeftCorner.Parent = LeftPanel
+
+-- Brand Header
+local HeaderContainer = Instance.new("Frame")
+HeaderContainer.Size = UDim2.new(1, 0, 0, 65)
+HeaderContainer.BackgroundTransparency = 1
+HeaderContainer.Parent = LeftPanel
+
+local LogoText = Instance.new("TextLabel")
+LogoText.Size = UDim2.new(0, 40, 1, 0)
+LogoText.Position = UDim2.new(0, 15, 0, 0)
+LogoText.BackgroundTransparency = 1
+LogoText.Text = "B"
+LogoText.TextColor3 = Color3.fromRGB(138, 43, 226)
+LogoText.Font = Enum.Font.GothamBold
+LogoText.TextSize = 28
+LogoText.TextXAlignment = Enum.TextXAlignment.Left
+LogoText.Parent = HeaderContainer
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -60, 0, 20)
+TitleLabel.Position = UDim2.new(0, 50, 0, 15)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "blyet hub"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 14
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = HeaderContainer
+
+local SubtitleLabel = Instance.new("TextLabel")
+SubtitleLabel.Size = UDim2.new(1, -60, 0, 15)
+SubtitleLabel.Position = UDim2.new(0, 50, 0, 32)
+SubtitleLabel.BackgroundTransparency = 1
+SubtitleLabel.Text = "Violence District v1.0"
+SubtitleLabel.TextColor3 = Color3.fromRGB(115, 110, 125)
+SubtitleLabel.Font = Enum.Font.GothamSemibold
+SubtitleLabel.TextSize = 9
+SubtitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+SubtitleLabel.Parent = HeaderContainer
+
+-- Tab Container Frame
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -20, 1, -135)
+TabContainer.Position = UDim2.new(0, 10, 0, 70)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = LeftPanel
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.Padding = UDim.new(0, 6)
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Parent = TabContainer
+
+-- Live User Profile Card
+local UserCard = Instance.new("Frame")
+UserCard.Size = UDim2.new(1, -20, 0, 50)
+UserCard.Position = UDim2.new(0, 10, 1, -60)
+UserCard.BackgroundColor3 = Color3.fromRGB(18, 15, 24)
+UserCard.Parent = LeftPanel
+
+local CardCorner = Instance.new("UICorner")
+CardCorner.CornerRadius = UDim.new(0, 6)
+CardCorner.Parent = UserCard
+
+local AvatarImage = Instance.new("ImageLabel")
+AvatarImage.Size = UDim2.new(0, 36, 0, 36)
+AvatarImage.Position = UDim2.new(0, 8, 0.5, -18)
+AvatarImage.BackgroundColor3 = Color3.fromRGB(24, 20, 32)
+AvatarImage.BorderSizePixel = 0
+AvatarImage.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+AvatarImage.Parent = UserCard
+
+local AvatarCorner = Instance.new("UICorner")
+AvatarCorner.CornerRadius = UDim.new(1, 0)
+AvatarCorner.Parent = AvatarImage
+
+local UsernameLabel = Instance.new("TextLabel")
+UsernameLabel.Size = UDim2.new(1, -54, 0, 16)
+UsernameLabel.Position = UDim2.new(0, 48, 0, 10)
+UsernameLabel.BackgroundTransparency = 1
+UsernameLabel.Text = string.upper(player.Name)
+UsernameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+UsernameLabel.Font = Enum.Font.GothamBold
+UsernameLabel.TextSize = 10
+UsernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+UsernameLabel.Parent = UserCard
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -54, 0, 12)
+StatusLabel.Position = UDim2.new(0, 48, 0, 24)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Welcome"
+StatusLabel.TextColor3 = Color3.fromRGB(138, 43, 226)
+StatusLabel.Font = Enum.Font.GothamSemibold
+StatusLabel.TextSize = 9
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = UserCard
+
+--------------------------------------------------------------------------------
+-- RIGHT PANEL (DYNAMIC VIEWPORTS)
+--------------------------------------------------------------------------------
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -180, 1, 0)
+ContentFrame.Position = UDim2.new(0, 180, 0, 0)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local TopHeader = Instance.new("Frame")
+TopHeader.Size = UDim2.new(1, 0, 0, 45)
+TopHeader.BackgroundTransparency = 1
+TopHeader.Parent = ContentFrame
+
+-- Top Selection Banner
+local DropdownBtn = Instance.new("TextButton")
+DropdownBtn.Size = UDim2.new(0, 100, 0, 28)
+DropdownBtn.Position = UDim2.new(0, 15, 0.5, -14)
+DropdownBtn.BackgroundColor3 = Color3.fromRGB(15, 12, 20)
+DropdownBtn.Text = "  main  "
+DropdownBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+DropdownBtn.Font = Enum.Font.GothamBold
+DropdownBtn.TextSize = 11
+DropdownBtn.Parent = TopHeader
+
+local DropdownCorner = Instance.new("UICorner")
+DropdownCorner.CornerRadius = UDim.new(0, 5)
+DropdownCorner.Parent = DropdownBtn
+
+-- Permanent Kill-Switch Button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 20, 0, 20)
+CloseButton.Position = UDim2.new(1, -35, 0.5, -10)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "✕"
+CloseButton.TextColor3 = Color3.fromRGB(150, 145, 160)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
+CloseButton.Parent = TopHeader
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local PagesContainer = Instance.new("Frame")
+PagesContainer.Size = UDim2.new(1, -30, 1, -60)
+PagesContainer.Position = UDim2.new(0, 15, 0, 45)
+PagesContainer.BackgroundTransparency = 1
+PagesContainer.Parent = ContentFrame
+
+local PageList = Instance.new("Frame")
+PageList.Size = UDim2.new(1, 0, 1, 0)
+PageList.BackgroundTransparency = 1
+PageList.Parent = PagesContainer
+
+local Grid = Instance.new("UIGridLayout")
+Grid.CellSize = UDim2.new(0, 175, 0, 36)
+Grid.CellPadding = UDim2.new(0, 12, 0, 10)
+Grid.Parent = PageList
+
+--------------------------------------------------------------------------------
+-- TAB INTERFACE BUILDERS
+--------------------------------------------------------------------------------
+local tabs = {}
+local function CreatePageButton(name, order)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 32)
+    button.BackgroundColor3 = Color3.fromRGB(15, 12, 20)
+    button.BackgroundTransparency = 1
+    button.Text = "   " .. name
+    button.TextColor3 = Color3.fromRGB(150, 145, 160)
+    button.Font = Enum.Font.GothamSemibold
+    button.TextSize = 11
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.LayoutOrder = order
+    button.Parent = TabContainer
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = button
+    
+    button.MouseButton1Click:Connect(function()
+        for _, otherBtn in ipairs(TabContainer:GetChildren()) do
+        if otherBtn:IsA("TextButton") then
+                otherBtn.BackgroundTransparency = 1
+                otherBtn.TextColor3 = Color3.fromRGB(150, 145, 160)
+            end
+        end
+        button.BackgroundTransparency = 0
+        button.BackgroundColor3 = Color3.fromRGB(18, 15, 24)
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Features.ActiveTab = name
+        
+        -- Clean existing viewport controls
+        for _, item in ipairs(PageList:GetChildren()) do
+            if not item:IsA("UIGridLayout") then item:Destroy() end
+        end
+        tabs[name]()
+    end)
+end
+
+local function AddToggle(text, configKey, callback)
+    local btn = Instance.new("TextButton")
+    btn.BackgroundColor3 = Color3.fromRGB(16, 13, 22)
+    btn.Text = "  " .. text
+    btn.TextColor3 = Color3.fromRGB(150, 145, 160)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 10
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Parent = PageList
+    
+    local cr = Instance.new("UICorner") cr.CornerRadius = UDim.new(0, 5) cr.Parent = btn
+    local stroke = Instance.new("UIStroke") stroke.Thickness = 1 stroke.Color = Color3.fromRGB(30, 26, 38) stroke.Parent = btn
+    
+    local toggleIndicator = Instance.new("Frame")
+    toggleIndicator.Size = UDim2.new(0, 12, 0, 12)
+    toggleIndicator.Position = UDim2.new(1, -22, 0.5, -6)
+    toggleIndicator.BackgroundColor3 = Features[configKey] and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(30, 26, 38)
+    toggleIndicator.Parent = btn
+    local ticr = Instance.new("UICorner") ticr.CornerRadius = UDim.new(1, 0) ticr.Parent = toggleIndicator
+
+    btn.MouseButton1Click:Connect(function()
+        Features[configKey] = not Features[configKey]
+        toggleIndicator.BackgroundColor3 = Features[configKey] and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(30, 26, 38)
+        if callback then callback(Features[configKey]) end
+    end)
+end
+
+--------------------------------------------------------------------------------
+-- BINDING PAGES & CORE FEATURES
+--------------------------------------------------------------------------------
+tabs["Dashboard"] = function()
+    AddToggle("Anti Knockback Hook", "AntiKnock")
+    AddToggle("State God Mode", "GodMode")
+    AddToggle("Instant Proximity Interact", "InstantInteraction")
+end
+
+tabs["Visual"] = function()
+    AddToggle("Fullbright Preset", "Fullbright")
+    AddToggle("No Fog / Post Effects", "NoFog")
+    AddToggle("Player Box ESP", "PlayerESP")
+end
+
+tabs["Player"] = function()
+    AddToggle("Sustained Camera Aimlock", "Aimlock")
+    AddToggle("Infinite Sprint Stamina", "InfiniteStamina")
+end
+
+tabs["Survivor"] = function()
+    AddToggle("Automated Auto Parry", "AutoParry")
+end
+
+tabs["Killer"] = function()
+    AddToggle("Proximity Kill Aura", "KillAura")
+end
+
+-- Initialize Tab Panels
+CreatePageButton("Dashboard", 1)
+CreatePageButton("Visual", 2)
+CreatePageButton("Player", 3)
+CreatePageButton("Survivor", 4)
+CreatePageButton("Killer", 5)
+
+-- Force load initial layout State
+task.spawn(function()
+    task.wait(0.1)
+    local defaultTab = TabContainer:FindFirstChild("Dashboard")
+    if defaultTab then
+        -- Emulate click to bootstrap page elements
+        Features.ActiveTab = "Dashboard"
+        defaultTab.BackgroundTransparency = 0
+        defaultTab.BackgroundColor3 = Color3.fromRGB(18, 15, 24)
+        defaultTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tabs["Dashboard"]()
+    end
+end)
