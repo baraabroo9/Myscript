@@ -1,0 +1,579 @@
+-- BLYET HUB // VIOLENCE DISTRICT V1.0.0
+if not game:IsLoaded() then
+    pcall(function() game.Loaded:Wait() end)
+end
+
+-- Destroy previous instances to prevent overlap issues
+if game:GetService("CoreGui"):FindFirstChild("blyet_hub") then
+    game:GetService("CoreGui"):FindFirstChild("blyet_hub"):Destroy()
+end
+
+--> Core Variables & Services <--
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local playerCharacter = player.Character or player.CharacterAdded:Wait()
+local playerHumanoidRootPart = playerCharacter:FindFirstChild("HumanoidRootPart") or playerCharacter:WaitForChild("HumanoidRootPart")
+
+player.CharacterAdded:Connect(function(char)
+    playerCharacter = char
+    playerHumanoidRootPart = char:WaitForChild("HumanoidRootPart")
+end)
+
+--> Script Settings <--
+local Features = {
+    AutoParry = false,
+    Aimlock = false,
+    GodMode = false,
+    AntiKnock = false,
+    NoFog = false,
+    Fullbright = false,
+    PlayerESP = false,
+    WorldESP = false,
+    ActiveTab = "Dashboard"
+}
+
+--> Metatable Security & Anti-Knockback Hook <--
+local mt = getrawmetatable(game)
+if mt and setreadonly then
+    setreadonly(mt, false)
+    local oldIndex = mt.__index
+    local oldNewIndex = mt.__newindex
+    
+    mt.__newindex = newcclosure(function(self, key, value)
+        if not checkcaller() and Features.AntiKnock and self:IsA("BodyVelocity") or self:IsA("LinearVelocity") then
+            return -- Block external forces from setting velocity objects
+        end
+        if not checkcaller() and Features.AntiKnock and self.Name == "HumanoidRootPart" and key == "Velocity" then
+            return -- Block direct velocity writes to root
+        end
+        return oldNewIndex(self, key, value)
+    end)
+    setreadonly(mt, true)
+end
+
+--------------------------------------------------------------------------------
+-- AUTO-PARRY ENGINE (DIAGNOSTIC DETECTION)
+--------------------------------------------------------------------------------
+local function triggerParry()
+    local tool = playerCharacter:FindFirstChildOfClass("Tool")
+    if tool then
+        -- Automatically try both VirtualInput and Direct Activation to guarantee execution
+        tool:Activate()
+        local blockRemote = tool:FindFirstChild("Block") or tool:FindFirstChild("Parry") or tool:FindFirstChild("Remote")
+        if blockRemote and blockRemote:IsA("RemoteEvent") then
+            blockRemote:FireServer(true)
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    if not Features.AutoParry or not playerHumanoidRootPart then return end
+    
+    for _, enemy in ipairs(Players:GetPlayers()) do
+        if enemy ~= player and enemy.Character and enemy.Character:FindFirstChild("HumanoidRootPart") then
+            local enemyRoot = enemy.Character.HumanoidRootPart
+            local distance = (playerHumanoidRootPart.Position - enemyRoot.Position).Magnitude
+            
+            -- Detect proximity and attack animations
+            if distance < 12 then
+                local enemyHumanoid = enemy.Character:FindFirstChildOfClass("Humanoid")
+                if enemyHumanoid then
+                    local animator = enemyHumanoid:FindFirstChildOfClass("Animator")
+                    if animator then
+                        for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                            -- Scan for attack, slash, swing, or weapon-active keyframes
+                            local animName = string.lower(track.Animation.Name or "")
+                            if string.find(animName, "slash") or string.find(animName, "swing") or string.find(animName, "attack") or string.find(animName, "stab") then
+                                triggerParry()
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- AIMLOCK / SILENT TRACKER
+--------------------------------------------------------------------------------
+local function getClosestEnemy()
+    local target = nil
+    local maxDist = math.huge
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChildOfClass("Humanoid") then
+            if p.Character:FindFirstChildOfClass("Humanoid").Health > 0 then
+                local dist = (playerHumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                if dist < maxDist then
+                    target = p.Character.HumanoidRootPart
+                    maxDist = dist
+                end
+            end
+        end
+    end
+    return target
+end
+
+RunService.RenderStepped:Connect(function()
+    if Features.Aimlock then
+        local enemy = getClosestEnemy()
+        if enemy then
+            local cam = workspace.CurrentCamera
+            cam.CFrame = CFrame.new(cam.CFrame.Position, enemy.Position)
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- GOD MODE (STATE DESYNC & HP RECOVERY)
+--------------------------------------------------------------------------------
+task.spawn(function()
+    while task.wait(0.2) do
+        if Features.GodMode and playerCharacter then
+            local hum = playerCharacter:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and hum.Health < hum.MaxHealth then
+                -- Request basic healing/state packet triggers directly
+                local healRemote = playerCharacter:FindFirstChild("Heal") or playerCharacter:FindFirstChild("Regen")
+                if healRemote and healRemote:IsA("RemoteEvent") then
+                    healRemote:FireServer()
+                end
+                hum.Health = hum.MaxHealth
+            end
+        end
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- ENVIRONMENT UTILITIES (No Fog / Fullbright)
+--------------------------------------------------------------------------------
+local originalFogStart = Lighting.FogStart
+local originalFogEnd = Lighting.FogEnd
+local originalBrightness = Lighting.Brightness
+local originalAmbient = Lighting.Ambient
+
+RunService.Heartbeat:Connect(function()
+    if Features.NoFog then
+        Lighting.FogStart = 100000
+        Lighting.FogEnd = 100000
+    else
+        Lighting.FogStart = originalFogStart
+        Lighting.FogEnd = originalFogEnd
+    end
+    
+    if Features.Fullbright then
+        Lighting.Brightness = 2
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    else
+        Lighting.Brightness = originalBrightness
+        Lighting.Ambient = originalAmbient
+    end
+end)
+
+--------------------------------------------------------------------------------
+-- BOX ESP ENGINE
+--------------------------------------------------------------------------------
+local espBoxes = {}
+local function createESP(p)
+    if p == player then return end
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Color3.fromRGB(255, 0, 0)
+    box.Thickness = 1.5
+    box.Filled = false
+    
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") or not Features.PlayerESP then
+            box.Visible = false
+            if not p.Parent then
+                box:Destroy()
+                connection:Disconnect()
+            end
+            return
+        end
+        
+        local root = p.Character.HumanoidRootPart
+        local rootPos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(root.Position)
+        
+        if onScreen then
+            local top, topOnScreen = workspace.CurrentCamera:WorldToViewportPoint(root.Position + Vector3.new(0, 3, 0))
+            local bottom, bottomOnScreen = workspace.CurrentCamera:WorldToViewportPoint(root.Position - Vector3.new(0, 3.5, 0))
+            local height = math.abs(top.Y - bottom.Y)
+            local width = height / 1.5
+            
+            box.Size = Vector2.new(width, height)
+            box.Position = Vector2.new(rootPos.X - width / 2, rootPos.Y - height / 2)
+            box.Visible = true
+        else
+            box.Visible = false
+        end
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do createESP(p) end
+Players.PlayerAdded:Connect(createESP)
+
+--------------------------------------------------------------------------------
+-- UI FRAMEWORK CONSTRUCTION (Blyet Hub Elite Layout)
+--------------------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "blyet_hub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999999
+ScreenGui.Parent = (gethui and gethui()) or CoreGui or player:WaitForChild("PlayerGui")
+
+-- Floating Toggle Widget (Down on far left)
+local ToggleWidget = Instance.new("ImageButton")
+ToggleWidget.Name = "ToggleWidget"
+ToggleWidget.Size = UDim2.new(0, 50, 0, 50)
+ToggleWidget.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleWidget.BackgroundColor3 = Color3.fromRGB(15, 12, 20)
+ToggleWidget.BorderSizePixel = 0
+ToggleWidget.Parent = ScreenGui
+
+local WidgetCorner = Instance.new("UICorner")
+WidgetCorner.CornerRadius = UDim.new(1, 0)
+WidgetCorner.Parent = ToggleWidget
+
+local WidgetStroke = Instance.new("UIStroke")
+WidgetStroke.Thickness = 1.5
+WidgetStroke.Color = Color3.fromRGB(138, 43, 226)
+WidgetStroke.Parent = ToggleWidget
+
+local WidgetLabel = Instance.new("TextLabel")
+WidgetLabel.Size = UDim2.new(1, 0, 1, 0)
+WidgetLabel.BackgroundTransparency = 1
+WidgetLabel.Text = "B"
+WidgetLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WidgetLabel.Font = Enum.Font.GothamBold
+WidgetLabel.TextSize = 24
+WidgetLabel.Parent = ToggleWidget
+
+-- Main Frame (Clean, exact match to the blueprint image)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 580, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -290, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 8, 14)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 1.2
+MainStroke.Color = Color3.fromRGB(30, 26, 38)
+MainStroke.Parent = MainFrame
+
+-- Enable Window Dragging
+local dragToggle, dragStart, startPos
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    local position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    TweenService:Create(MainFrame, TweenInfo.new(0.08), {Position = position}):Play()
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggle = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragToggle = false end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if dragToggle then updateInput(input) end
+    end
+end)
+
+ToggleWidget.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+--------------------------------------------------------------------------------
+-- LEFT PANEL: HUB IDENTITY & NAVIGATION
+--------------------------------------------------------------------------------
+local LeftPanel = Instance.new("Frame")
+LeftPanel.Size = UDim2.new(0, 180, 1, 0)
+LeftPanel.BackgroundColor3 = Color3.fromRGB(13, 11, 18)
+LeftPanel.BorderSizePixel = 0
+LeftPanel.Parent = MainFrame
+
+local LeftCorner = Instance.new("UICorner")
+LeftCorner.CornerRadius = UDim.new(0, 8)
+LeftCorner.Parent = LeftPanel
+
+-- App Branding Header
+local HeaderContainer = Instance.new("Frame")
+HeaderContainer.Size = UDim2.new(1, 0, 0, 65)
+HeaderContainer.BackgroundTransparency = 1
+HeaderContainer.Parent = LeftPanel
+
+local LogoText = Instance.new("TextLabel")
+LogoText.Size = UDim2.new(0, 40, 1, 0)
+LogoText.Position = UDim2.new(0, 15, 0, 0)
+LogoText.BackgroundTransparency = 1
+LogoText.Text = "B"
+LogoText.TextColor3 = Color3.fromRGB(138, 43, 226)
+LogoText.Font = Enum.Font.GothamBold
+LogoText.TextSize = 28
+LogoText.TextXAlignment = Enum.TextXAlignment.Left
+LogoText.Parent = HeaderContainer
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -60, 0, 20)
+Title.Position = UDim2.new(0, 50, 0, 15)
+Title.BackgroundTransparency = 1
+Title.Text = "blyet hub"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = HeaderContainer
+
+local Subtitle = Instance.new("TextLabel")
+Subtitle.Size = UDim2.new(1, -60, 0, 15)
+Subtitle.Position = UDim2.new(0, 50, 0, 32)
+Subtitle.BackgroundTransparency = 1
+Subtitle.Text = "Violence District v1.0"
+Subtitle.TextColor3 = Color3.fromRGB(115, 110, 125)
+Subtitle.Font = Enum.Font.GothamSemibold
+Subtitle.TextSize = 9
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.Parent = HeaderContainer
+
+-- Tab Selection Container
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -20, 1, -135)
+TabContainer.Position = UDim2.new(0, 10, 0, 70)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = LeftPanel
+
+local TabListLayout = Instance.new("UIListLayout")
+TabListLayout.Padding = UDim.new(0, 6)
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Parent = TabContainer
+
+-- Dynamic User Identity Card (Exact Placement bottom left)
+local UserCard = Instance.new("Frame")
+UserCard.Size = UDim2.new(1, -20, 0, 50)
+UserCard.Position = UDim2.new(0, 10, 1, -60)
+UserCard.BackgroundColor3 = Color3.fromRGB(18, 15, 24)
+UserCard.Parent = LeftPanel
+
+local CardCorner = Instance.new("UICorner")
+CardCorner.CornerRadius = UDim.new(0, 6)
+CardCorner.Parent = UserCard
+
+local AvatarImage = Instance.new("ImageLabel")
+AvatarImage.Size = UDim2.new(0, 36, 0, 36)
+AvatarImage.Position = UDim2.new(0, 8, 0.5, -18)
+AvatarImage.BackgroundColor3 = Color3.fromRGB(24, 20, 32)
+AvatarImage.BorderSizePixel = 0
+AvatarImage.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+AvatarImage.Parent = UserCard
+
+local AvatarCorner = Instance.new("UICorner")
+AvatarCorner.CornerRadius = UDim.new(1, 0)
+AvatarCorner.Parent = AvatarImage
+
+local UsernameLabel = Instance.new("TextLabel")
+UsernameLabel.Size = UDim2.new(1, -54, 0, 16)
+UsernameLabel.Position = UDim2.new(0, 48, 0, 10)
+UsernameLabel.BackgroundTransparency = 1
+UsernameLabel.Text = string.upper(player.Name)
+UsernameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+UsernameLabel.Font = Enum.Font.GothamBold
+UsernameLabel.TextSize = 10
+UsernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+UsernameLabel.Parent = UserCard
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -54, 0, 12)
+StatusLabel.Position = UDim2.new(0, 48, 0, 24)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Welcome"
+StatusLabel.TextColor3 = Color3.fromRGB(138, 43, 226)
+StatusLabel.Font = Enum.Font.GothamSemibold
+StatusLabel.TextSize = 9
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = UserCard
+
+--------------------------------------------------------------------------------
+-- RIGHT CONTENT WINDOW
+--------------------------------------------------------------------------------
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -180, 1, 0)
+ContentFrame.Position = UDim2.new(0, 180, 0, 0)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+local TopHeader = Instance.new("Frame")
+TopHeader.Size = UDim2.new(1, 0, 0, 45)
+TopHeader.BackgroundTransparency = 1
+TopHeader.Parent = ContentFrame
+
+-- Top Dropdown Selector (Matching Image design)
+local DropdownBtn = Instance.new("TextButton")
+DropdownBtn.Size = UDim2.new(0, 100, 0, 28)
+DropdownBtn.Position = UDim2.new(0, 15, 0.5, -14)
+DropdownBtn.BackgroundColor3 = Color3.fromRGB(15, 12, 20)
+DropdownBtn.Text = "  main  "
+DropdownBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+DropdownBtn.Font = Enum.Font.GothamBold
+DropdownBtn.TextSize = 11
+DropdownBtn.Parent = TopHeader
+
+local DropdownCorner = Instance.new("UICorner")
+DropdownCorner.CornerRadius = UDim.new(0, 5)
+DropdownCorner.Parent = DropdownBtn
+
+-- Permanent Close Icon Button (Top right X)
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 20, 0, 20)
+CloseButton.Position = UDim2.new(1, -35, 0.5, -10)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "✕"
+CloseButton.TextColor3 = Color3.fromRGB(150, 145, 160)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 14
+CloseButton.Parent = TopHeader
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Main Tab Viewport (Displays active configuration features)
+local PagesContainer = Instance.new("Frame")
+PagesContainer.Size = UDim2.new(1, -30, 1, -60)
+PagesContainer.Position = UDim2.new(0, 15, 0, 45)
+PagesContainer.BackgroundTransparency = 1
+PagesContainer.Parent = ContentFrame
+
+local PageList = Instance.new("Frame")
+PageList.Size = UDim2.new(1, 0, 1, 0)
+PageList.BackgroundTransparency = 1
+PageList.Parent = PagesContainer
+
+local Grid = Instance.new("UIGridLayout")
+Grid.CellSize = UDim2.new(0, 175, 0, 36)
+Grid.CellPadding = UDim2.new(0, 12, 0, 10)
+Grid.Parent = PageList
+
+--------------------------------------------------------------------------------
+-- CREATOR FUNCTIONS & TABS
+--------------------------------------------------------------------------------
+local tabs = {}
+local function CreatePageButton(name, order)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, 32)
+    button.BackgroundColor3 = Color3.fromRGB(15, 12, 20)
+    button.BackgroundTransparency = 1
+    button.Text = "   " .. name
+    button.TextColor3 = Color3.fromRGB(150, 145, 160)
+    button.Font = Enum.Font.GothamSemibold
+    button.TextSize = 11
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.LayoutOrder = order
+    button.Parent = TabContainer
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = button
+    
+    button.MouseButton1Click:Connect(function()
+        for _, otherBtn in ipairs(TabContainer:GetChildren()) do
+            if otherBtn:IsA("TextButton") then
+                otherBtn.BackgroundTransparency = 1
+                otherBtn.TextColor3 = Color3.fromRGB(150, 145, 160)
+            end
+        end
+        button.BackgroundTransparency = 0
+        button.BackgroundColor3 = Color3.fromRGB(18, 15, 24)
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Features.ActiveTab = name
+        
+        -- Clear grid and reload active elements
+        for _, item in ipairs(PageList:GetChildren()) do
+            if not item:IsA("UIGridLayout") then item:Destroy() end
+        end
+        tabs[name]()
+    end)
+end
+
+local function AddToggle(text, configKey, callback)
+    local btn = Instance.new("TextButton")
+    btn.BackgroundColor3 = Color3.fromRGB(16, 13, 22)
+    btn.Text = "  " .. text
+    btn.TextColor3 = Color3.fromRGB(150, 145, 160)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 10
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.Parent = PageList
+    
+    local cr = Instance.new("UICorner") cr.CornerRadius = UDim.new(0, 5) cr.Parent = btn
+    local stroke = Instance.new("UIStroke") stroke.Thickness = 1 stroke.Color = Color3.fromRGB(30, 26, 38) stroke.Parent = btn
+    
+    local toggleIndicator = Instance.new("Frame")
+    toggleIndicator.Size = UDim2.new(0, 12, 0, 12)
+    toggleIndicator.Position = UDim2.new(1, -22, 0.5, -6)
+    toggleIndicator.BackgroundColor3 = Features[configKey] and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(30, 26, 38)
+    toggleIndicator.Parent = btn
+    local ticr = Instance.new("UICorner") ticr.CornerRadius = UDim.new(1, 0) ticr.Parent = toggleIndicator
+
+    btn.MouseButton1Click:Connect(function()
+        Features[configKey] = not Features[configKey]
+        toggleIndicator.BackgroundColor3 = Features[configKey] and Color3.fromRGB(138, 43, 226) or Color3.fromRGB(30, 26, 38)
+        if callback then callback(Features[configKey]) end
+    end)
+end
+
+--------------------------------------------------------------------------------
+-- DEFINE TAB DIRECTORY ACTION PACKETS
+--------------------------------------------------------------------------------
+tabs["Dashboard"] = function()
+    AddToggle("Automated Anti-Knock", "AntiKnock")
+    AddToggle("Uncapped Server Desync", "GodMode")
+end
+
+tabs["Visual"] = function()
+    AddToggle("Fullbright Ambient", "Fullbright")
+    AddToggle("Strip Render Fog", "NoFog")
+    AddToggle("Draw ESP Box boundaries", "PlayerESP")
+end
+
+tabs["Player"] = function()
+    AddToggle("Combat Target-Lock", "Aimlock")
+end
+
+tabs["Survivor"] = function()
+    AddToggle("Bypassed Auto Parry", "AutoParry")
+end
+
+tabs["Killer"] = function()
+    -- Dedicated Killer tab controls
+end
+
+-- Initialize Left navigation elements
+CreatePageButton("Dashboard", 1)
+CreatePageButton("Visual", 2)
+CreatePageButton("Player", 3)
+CreatePageButton("Survivor", 4)
+CreatePageButton("Killer", 5)
+
+-- Force load Dashboard default state on execute
+TabContainer:GetChildren()[2]:Click()
