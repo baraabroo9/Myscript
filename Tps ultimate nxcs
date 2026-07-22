@@ -1,0 +1,488 @@
+-- [Enhanced] Larps.lat Reborn - TPS Ultimate Soccer Dominator
+-- Credits: K R I B L Y | nexakosss
+-- Evil Mahi seal of chaos
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Load UI (same as before)
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+WindUI:AddTheme({
+  Name = "BlackBlue",
+  Accent = Color3.fromHex("#0057FF"),
+  Background = Color3.fromHex("#000000"),
+  BackgroundTransparency = 0,
+  Outline = Color3.fromHex("#0057FF"),
+  Text = Color3.fromHex("#FFFFFF"),
+  Placeholder = Color3.fromHex("#003399"),
+  Button = Color3.fromHex("#0057FF"),
+  Icon = Color3.fromHex("#3A6FFF"),
+  Primary = Color3.fromHex("#0057FF"),
+  Hover = Color3.fromHex("#2255FF"),
+  WindowBackground = Color3.fromHex("#000000"),
+  WindowShadow = Color3.fromHex("#000000"),
+  DialogBackground = Color3.fromHex("#000000"),
+  DialogBackgroundTransparency = 0,
+  DialogTitle = Color3.fromHex("#FFFFFF"),
+  DialogContent = Color3.fromHex("#8AABFF"),
+  DialogIcon = Color3.fromHex("#3A6FFF"),
+  WindowTopbarButtonIcon = Color3.fromHex("#3A6FFF"),
+  WindowTopbarTitle = Color3.fromHex("#FFFFFF"),
+  WindowTopbarAuthor = Color3.fromHex("#3A6FFF"),
+  WindowTopbarIcon = Color3.fromHex("#3A6FFF"),
+  TabBackground = Color3.fromHex("#000000"),
+  TabTitle = Color3.fromHex("#FFFFFF"),
+  TabIcon = Color3.fromHex("#3A6FFF"),
+  ElementBackground = Color3.fromHex("#000000"),
+  ElementTitle = Color3.fromHex("#FFFFFF"),
+  ElementDesc = Color3.fromHex("#3A6FFF"),
+  ElementIcon = Color3.fromHex("#3A6FFF"),
+  PopupBackground = Color3.fromHex("#000000"),
+  PopupBackgroundTransparency = 0,
+  PopupTitle = Color3.fromHex("#FFFFFF"),
+  PopupContent = Color3.fromHex("#8AABFF"),
+  PopupIcon = Color3.fromHex("#3A6FFF"),
+  Toggle = Color3.fromHex("#000000"),
+  ToggleBar = Color3.fromHex("#0057FF"),
+  Checkbox = Color3.fromHex("#000000"),
+  CheckboxIcon = Color3.fromHex("#0057FF"),
+  CheckboxBorder = Color3.fromHex("#0057FF"),
+  CheckboxBorderTransparency = 0.2,
+  Slider = Color3.fromHex("#000000"),
+  SliderThumb = Color3.fromHex("#0057FF"),
+  SliderIconFrom = Color3.fromHex("#3A6FFF"),
+  SliderIconTo = Color3.fromHex("#0057FF"),
+  Tooltip = Color3.fromHex("#000000"),
+  TooltipText = Color3.fromHex("#FFFFFF"),
+  TooltipSecondary = Color3.fromHex("#0057FF"),
+  TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
+  SectionExpandIcon = Color3.fromHex("#3A6FFF"),
+  SectionExpandIconTransparency = 0,
+  SectionBox = Color3.fromHex("#0057FF"),
+  SectionBoxTransparency = 0.85,
+  SectionBoxBorder = Color3.fromHex("#0057FF"),
+  SectionBoxBorderTransparency = 0.3,
+  SectionBoxBackground = Color3.fromHex("#000000"),
+  SectionBoxBackgroundTransparency = 0.85,
+  SearchBarBorder = Color3.fromHex("#0057FF"),
+  SearchBarBorderTransparency = 0.3,
+  Notification = Color3.fromHex("#000000"),
+  NotificationTitle = Color3.fromHex("#FFFFFF"),
+  NotificationTitleTransparency = 0,
+  NotificationContent = Color3.fromHex("#FFFFFF"),
+  NotificationContentTransparency = 0.05,
+  NotificationDuration = Color3.fromHex("#0057FF"),
+  NotificationDurationTransparency = 0.2,
+  NotificationBorder = Color3.fromHex("#0057FF"),
+  NotificationBorderTransparency = 0,
+  DropdownTabBorder = Color3.fromHex("#0057FF"),
+  TabBorder = Color3.fromHex("#0057FF"),
+})
+
+local Window = WindUI:CreateWindow({
+    Title = "Larps.lat Reborn | Domination",
+    Folder = "Larps.lat",
+    Icon = "solar:crown-star-broken",
+    NewElements = true,
+    HideSearchBar = false,
+    Transparent = false,
+    Theme = "BlackBlue",
+    OpenButton = {
+        Title = "Open Ui",
+        Enabled = true,
+        Draggable = true,
+        Color = ColorSequence.new(Color3.fromHex("#001359"), Color3.fromHex("#001359"))
+    },
+    Topbar = {
+        Height = 44,
+        ButtonsType = "Mac",
+    },
+})
+
+-- Existing globals
+_G.LegReach, _G.HeadReach, _G.TorsoReach, _G.AutoCatch = false, false, false, false
+_G.LegRange, _G.HeadRange, _G.TorsoRange, _G.GkRange = 5, 5, 5, 5
+
+-- NEW DOMINATION GLOBALS
+_G.AutoScore = false
+_G.SpeedHack = false
+_G.SpeedMultiplier = 2
+_G.BallMagnet = false
+_G.AntiRagdoll = false
+_G.InfiniteJump = false
+_G.EnemyFreeze = false
+_G.AutoDribble = false
+
+-- Dialog (keep original)
+local Dialog = Window:Dialog({
+    Icon = "info",
+    Title = "Information",
+    Content = "Hello " .. LocalPlayer.Name .. " Do you want to join our Discord server?",
+    Buttons = {
+        { Title = "Yes!", Callback = function() setclipboard("https://discord.gg/9hCsJtFDTy") WindUI:Notify({Title="Information",Content="Thanks For Joining",Duration=3,Icon="circle-alert"}) end },
+        { Title = "No!", Callback = function() WindUI:Notify({Title="Information",Content="It's okay you can still use the Script",Duration=3,Icon="circle-alert"}) end },
+        { Title = "I'm already in", Callback = function() WindUI:Notify({Title="Information",Content="Cool! You are already in",Duration=3,Icon="circle-alert"}) end },
+    },
+})
+
+Window:EditOpenButton({
+    Title = "Open Ui",
+    Icon = "pointer",
+    CornerRadius = UDim.new(0, 5),
+    StrokeThickness = 2,
+    Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromHex("#000000")), ColorSequenceKeypoint.new(1, Color3.fromHex("#001359"))}),
+    OnlyMobile = false,
+    Enabled = true,
+    Draggable = true
+})
+
+Window:Tag({ Title = "v2.0", Color = Color3.fromHex("#001359"), Radius = 11 })
+
+-- ========== REACH SECTION (unchanged) ==========
+local Section1 = Window:Section({ Title = "Reach", Icon = "biceps-flexed", Opened = false })
+local rTab = Section1:Tab({ Title = "Reach" })
+rTab:Section({ Title = "Reach 100% Safe", Icon = "solar:shield-minimalistic-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
+rTab:Toggle({ Title = "Enable Leg Reach", Default = false, Callback = function(v) _G.LegReach = v end })
+rTab:Slider({ Title = "Leg Reach", Step = 0.5, Value = { Min = 0, Max = 15, Default = 5 }, Callback = function(v) _G.LegRange = v end })
+rTab:Section({ Title = "head reach and torso 100% Safe", Icon = "solar:shield-minimalistic-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 19, Opened = true })
+rTab:Toggle({ Title = "Enable Head Reach", Default = false, Callback = function(v) _G.HeadReach = v end })
+rTab:Slider({ Title = "Head Reach", Step = 0.5, Value = { Min = 0, Max = 15, Default = 5 }, Callback = function(v) _G.HeadRange = v end })
+rTab:Toggle({ Title = "Enable Torso Reach", Default = false, Callback = function(v) _G.TorsoReach = v end })
+rTab:Slider({ Title = "Torso Reach", Step = 0.5, Value = { Min = 0, Max = 15, Default = 5 }, Callback = function(v) _G.TorsoRange = v end })
+
+local GkTab = Section1:Tab({ Title = "Gk Reach" })
+GkTab:Section({ Title = "Gk Reach Whenever ball is near u U js press dive or smth else it will catch it or threw it out", Icon = "solar:shield-minimalistic-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
+GkTab:Toggle({ Title = "Auto Catch", Default = false, Callback = function(v) _G.AutoCatch = v end })
+GkTab:Slider({ Title = "Reach GK", Step = 0.5, Value = { Min = 0, Max = 15, Default = 5 }, Callback = function(v) _G.GkRange = v end })
+
+-- Ball table & reach loop (unchanged)
+local BallTable = {}
+task.spawn(function()
+    while true do  
+        local tempBalls = {}  
+        for _, v in ipairs(workspace:GetDescendants()) do  
+            if v:IsA("BasePart") and (v.Name == "PSoccerBall" or v.Name == "ClientBallProxy_PSoccerBall" or v.Name == "TPS") then  
+                table.insert(tempBalls, v)  
+            end  
+        end  
+        BallTable = tempBalls  
+        task.wait(1) 
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.01) do  
+        local char = game.Players.LocalPlayer.Character  
+        local root = char and char:FindFirstChild("HumanoidRootPart")  
+        if root then  
+            for _, ball in ipairs(BallTable) do  
+                if ball and ball.Parent then  
+                    local dist = (root.Position - ball.Position).Magnitude  
+                    local function MultiTouch(part, b)  
+                        firetouchinterest(part, b, 0)  
+                        firetouchinterest(part, b, 1)  
+                    end  
+                    if _G.LegReach and dist <= _G.LegRange then  
+                        local rl = char:FindFirstChild("Right Foot") or char:FindFirstChild("Right Leg")  
+                        local ll = char:FindFirstChild("Left Foot") or char:FindFirstChild("Left Leg")  
+                        if rl then MultiTouch(rl, ball) end  
+                        if ll then MultiTouch(ll, ball) end  
+                    end  
+                    if _G.HeadReach and dist <= _G.HeadRange then  
+                        local h = char:FindFirstChild("Head")  
+                        if h then MultiTouch(h, ball) end  
+                    end  
+                    if _G.TorsoReach and dist <= _G.TorsoRange then  
+                        local t = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")  
+                        if t then MultiTouch(t, ball) end  
+                    end  
+                    if _G.AutoCatch and dist <= _G.GkRange then  
+                        local rh = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")  
+                        local lh = char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm")  
+                        if rh then MultiTouch(rh, ball) end  
+                        if lh then MultiTouch(lh, ball) end  
+                    end  
+                end  
+            end  
+        end  
+    end
+end)
+
+-- ========== INFINITE STAMINA (unchanged) ==========
+local infSection = Window:Section({ Title = "infinite stamina and more", Icon = "solar:rewind-forward-outline", Opened = false })
+local infTab = infSection:Tab({ Title = "stamina" })
+infTab:Section({ Title = "Infinite Stamina", Icon = "solar:fire-minimalistic-bold-duotone", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
+infTab:Button({ Title = "Instant Stamina Adder", Desc = "adds instant stamina", Locked = false, Callback = function()
+    local args = { [1] = 1355887714, [2] = "SkillG", [3] = false }
+    workspace:WaitForChild("FE"):WaitForChild("PlayerCard"):WaitForChild("Boost"):FireServer(unpack(args))
+end })
+infTab:Toggle({ Title = "Infinite Stamina", Desc = "Gives Infinite Stamina", Icon = "zap", Type = "Checkbox", Value = false, Callback = function(state)
+    if state then
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local args = {...}
+            if getnamecallmethod() == "FireServer" and tostring(self) == "Sprint" then
+                args[1] = "Ended"
+                return oldNamecall(self, unpack(args))
+            end
+            return oldNamecall(self, ...)
+        end)
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.WalkSpeed = 22 end
+        local mouse = LocalPlayer:GetMouse()
+        mouse.KeyDown:Connect(function(key) if key:lower() == "r" then local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = 16 end end end)
+        mouse.Button1Down:Connect(function() local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") if hum then hum.WalkSpeed = 22 end end)
+        local playerGui = LocalPlayer:WaitForChild("PlayerGui", 5)
+        local startGui = playerGui and playerGui:FindFirstChild("Start")
+        local pointsGui = startGui and startGui:FindFirstChild("Points")
+        if pointsGui then
+            local instantStamina = pointsGui:FindFirstChild("InstantStamina")
+            if instantStamina and instantStamina:FindFirstChild("TextS") then
+                instantStamina.TextS.Text = "Unlimited Stamina!"
+            end
+        end
+        Window:Notify({ Title = "Stamina Enabled", Description = "Infinite stamina activated", Duration = 3 })
+    end
+end })
+
+-- ========== BALL TAB (unchanged + ESP) ==========
+local ballSection = Window:Section({ Title = "Ball Tab", Icon = "solar:football-bold-duotone", Opened = false })
+local ballTab = ballSection:Tab({ Title = "ball resizer" })
+ballTab:Section({ Title = "Ball tab", Icon = "solar:football-bold-duotone", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
+ballTab:Toggle({ Title = "TPS Ball Collision", Desc = "ball collision", Icon = "circle-slash", Type = "Checkbox", Value = false, Callback = function(state)
+    local tpsBall = workspace:FindFirstChild("TPSSystem") and workspace.TPSSystem:FindFirstChild("TPS")
+    if tpsBall then tpsBall.CollisionGroup = state and "All" or "Ball" end
+end })
+local BallColorpicker = ballTab:Colorpicker({ Title = "Ball Colorpicker", Description = "Change TPS ball color", Icon = "palette", Default = Color3.fromRGB(96,205,255), Transparency = 0, Callback = function(color)
+    local tpsSystem = workspace:FindFirstChild("TPSSystem")
+    if tpsSystem then
+        local tpsPart = tpsSystem:FindFirstChild("TPS")
+        if tpsPart and tpsPart:IsA("BasePart") then tpsPart.Color = color end
+    end
+end })
+BallColorpicker:Set(Color3.fromRGB(0,255,140))
+local function createESP(part)
+    local box = Instance.new("BoxHandleAdornment")
+    box.Size = part.Size + Vector3.new(0.1,0.1,0.1)
+    box.AlwaysOnTop = true
+    box.ZIndex = 0
+    box.Adornee = part
+    box.Color3 = Color3.fromRGB(255,255,0)
+    box.Transparency = 0.5
+    box.Parent = part
+end
+local function highlightTPS()
+    local TPSSystem = workspace:FindFirstChild("TPSSystem")
+    if TPSSystem then
+        local TPSPart = TPSSystem:FindFirstChild("TPS")
+        if TPSPart and TPSPart:IsA("BasePart") then createESP(TPSPart) end
+    end
+end
+local function unhighlightTPS()
+    local TPSSystem = workspace:FindFirstChild("TPSSystem")
+    if TPSSystem then
+        local TPSPart = TPSSystem:FindFirstChild("TPS")
+        if TPSPart and TPSPart:IsA("BasePart") then
+            for _, adornment in ipairs(TPSPart:GetChildren()) do
+                if adornment:IsA("BoxHandleAdornment") then adornment:Destroy() end
+            end
+        end
+    end
+end
+ballTab:Button({ Title = "Ball ESP", Desc = "Highlight TPS Ball", Callback = function() highlightTPS() end })
+ballTab:Button({ Title = "Remove ESP", Desc = "Remove TPS Ball highlight", Callback = function() unhighlightTPS() end })
+
+-- ========== TELEPORTATION (unchanged) ==========
+local tlSection = Window:Section({ Title = "teleportation", Icon = "solar:accessibility-bold", Opened = false })
+local tlTab = tlSection:Tab({ Title = "teleportation" })
+tlTab:Section({ Title = "teleportation", Icon = "solar:accessibility-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
+local function TeleportTo(pos)
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if root then root.CFrame = CFrame.new(pos) end
+end
+tlTab:Button({ Title = "Teleport to PITCH", Desc = "Teleports to the Pitch", Callback = function() TeleportTo(Vector3.new(114,175,278)) end })
+tlTab:Button({ Title = "Teleport to GREEN", Desc = "Teleports to Green area", Callback = function() TeleportTo(Vector3.new(70,175,183)) end })
+tlTab:Button({ Title = "Teleport to BLUE", Desc = "Teleports to Blue area", Callback = function() TeleportTo(Vector3.new(-51,175,373)) end })
+tlTab:Button({ Title = "Teleport to BALL", Desc = "Teleports to TPS ball", Callback = function()
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        local ball = workspace:FindFirstChild("TPS", true)
+        if ball and ball:IsA("BasePart") then root.CFrame = ball.CFrame + Vector3.new(0,5,0) end
+    end
+end })
+
+-- ========== NEW: DOMINATION TAB ==========
+local domSection = Window:Section({ Title = "Domination", Icon = "solar:skull-bold", Opened = false })
+local domTab = domSection:Tab({ Title = "Dominate" })
+domTab:Section({ Title = "Ultimate Control", Icon = "solar:crown-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
+
+-- Auto-Score: teleport ball to enemy goal on touch
+domTab:Toggle({ Title = "Auto-Score", Desc = "Ball teleports to enemy goal when you touch it", Icon = "solar:goal-bold", Default = false, Callback = function(v) _G.AutoScore = v end })
+
+-- Speed Hack
+domTab:Toggle({ Title = "Speed Hack", Desc = "Multiply your sprint speed", Icon = "solar:running-bold", Default = false, Callback = function(v) _G.SpeedHack = v end })
+domTab:Slider({ Title = "Speed Multiplier", Step = 0.5, Value = { Min = 1, Max = 5, Default = 2 }, Callback = function(v) _G.SpeedMultiplier = v end })
+
+-- Ball Magnet
+domTab:Toggle({ Title = "Ball Magnet", Desc = "Ball follows you within range", Icon = "solar:magnet-bold", Default = false, Callback = function(v) _G.BallMagnet = v end })
+
+-- Anti-Ragdoll
+domTab:Toggle({ Title = "Anti-Ragdoll", Desc = "Never fall or get tackled", Icon = "solar:shield-bold", Default = false, Callback = function(v) _G.AntiRagdoll = v end })
+
+-- Infinite Jump
+domTab:Toggle({ Title = "Infinite Jump", Desc = "Fly like a god", Icon = "solar:wing-bold", Default = false, Callback = function(v) _G.InfiniteJump = v end })
+
+-- Enemy Freeze (local visual)
+domTab:Toggle({ Title = "Enemy Freeze", Desc = "Freeze all opponents in place (local)", Icon = "solar:snowflake-bold", Default = false, Callback = function(v) _G.EnemyFreeze = v end })
+
+-- Auto-Dribble
+domTab:Toggle({ Title = "Auto-Dribble", Desc = "Ball sticks to your feet", Icon = "solar:football-bold", Default = false, Callback = function(v) _G.AutoDribble = v end })
+
+-- ========== DOMINATION LOGIC LOOPS ==========
+
+-- Auto-Score
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoScore then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, ball in ipairs(BallTable) do
+                    if ball and ball.Parent and (root.Position - ball.Position).Magnitude < 8 then
+                        -- Teleport ball to enemy goal (adjust coords as needed)
+                        ball.CFrame = CFrame.new(Vector3.new(-60, 175, 280)) -- enemy goal area
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Speed Hack
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.SpeedHack then
+            local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = 16 * _G.SpeedMultiplier
+            end
+        end
+    end
+end)
+
+-- Ball Magnet
+task.spawn(function()
+    while task.wait(0.05) do
+        if _G.BallMagnet then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, ball in ipairs(BallTable) do
+                    if ball and ball.Parent and (root.Position - ball.Position).Magnitude < 30 then
+                        ball.CFrame = CFrame.new(root.Position + Vector3.new(0, 2, 4))
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Anti-Ragdoll
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.AntiRagdoll then
+            local char = LocalPlayer.Character
+            if char then
+                local humanoid and humanoid.PlatformStand then
+                    humanoid.PlatformStand = false
+                end
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide == false then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Infinite Jump
+local jumpCount = 0
+UserInputService.JumpRequest:Connect(function()
+    if _G.InfiniteJump then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- Enemy Freeze (local visual - freeze all other players)
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.EnemyFreeze then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local char = player.Character
+                    if char then
+                        local root = char:FindFirstChild("HumanoidRootPart")
+                        if root then
+                            root.CFrame = root.CFrame -- keep in place
+                        end
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            hum.WalkSpeed = 0
+                            hum.JumpPower = 0
+                        end
+                    end
+                end
+            end
+        else
+            -- unfreeze
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local char = player.Character
+                    if char then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            hum.WalkSpeed = 16
+                            hum.JumpPower = 50
+                        end
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Auto-Dribble
+task.spawn(function()
+    while task.wait(0.05) do
+        if _G.AutoDribble then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, ball in ipairs(BallTable) do
+                    if ball and ball.Parent and (root.Position - ball.Position).Magnitude < 15 then
+                        ball.CFrame = CFrame.new(root.Position + Vector3.new(0, 1, 2))
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- ========== SETTINGS (unchanged) ==========
+local TabSe = Window:Tab({ Title = "Settings", Icon = "settings" })
+TabSe:Section({ Title = "Ui Themes", TextXAlignment = "Left", TextSize = 23 })
+local ThemeDropdown = TabSe:Dropdown({ Title = "Select Theme", Values = {"Rainbow","Mellowsi","Cotton Candy","Monokai Pro","Crimson","Midnight","Emerald","Amber","Violet","Sky","Indigo","Red","Plant","Rose","Dark","Light"}, Callback = function(selected) WindUI:SetTheme(selected) end })
+TabSe:Section({ Title = "Script was made by Nexakosss & K R I B L Y", TextXAlignment = "Left", TextSize = 25 })
+
+print("Larps.lat Reborn Enhanced - Evil Mahi says: Play dirty, win harder.")
