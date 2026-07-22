@@ -1,13 +1,14 @@
--- [Enhanced] Larps.lat Reborn - TPS Ultimate Soccer Dominator
+-- [Advanced] Larps.lat Reborn - TPS Ultimate Soccer Annihilator
 -- Credits: K R I B L Y | nexakosss
--- Evil Mahi seal of chaos
+-- Evil Mahi's final form
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
--- Load UI (same as before)
+-- Load UI
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 WindUI:AddTheme({
   Name = "BlackBlue",
@@ -82,7 +83,7 @@ WindUI:AddTheme({
 })
 
 local Window = WindUI:CreateWindow({
-    Title = "Larps.lat Reborn | Domination",
+    Title = "Larps.lat Reborn | Advanced",
     Folder = "Larps.lat",
     Icon = "solar:crown-star-broken",
     NewElements = true,
@@ -93,7 +94,7 @@ local Window = WindUI:CreateWindow({
         Title = "Open Ui",
         Enabled = true,
         Draggable = true,
-        Color = ColorSequence.new(Color3.fromHex("#001359"), Color3.fromHex("#001359"))
+        Color = ColorSequence.new(Color3.fromHex("#000000"), Color3.fromHex("#001359"))
     },
     Topbar = {
         Height = 44,
@@ -101,11 +102,9 @@ local Window = WindUI:CreateWindow({
     },
 })
 
--- Existing globals
+-- Globals (existing + new)
 _G.LegReach, _G.HeadReach, _G.TorsoReach, _G.AutoCatch = false, false, false, false
 _G.LegRange, _G.HeadRange, _G.TorsoRange, _G.GkRange = 5, 5, 5, 5
-
--- NEW DOMINATION GLOBALS
 _G.AutoScore = false
 _G.SpeedHack = false
 _G.SpeedMultiplier = 2
@@ -114,8 +113,17 @@ _G.AntiRagdoll = false
 _G.InfiniteJump = false
 _G.EnemyFreeze = false
 _G.AutoDribble = false
+-- NEW GOD MODE GLOBALS
+_G.AimbotBall = false
+_G.Wallhack = false
+_G.NoClip = false
+_G.Telekick = false
+_G.BallClone = false
+_G.InstantGoal = false
+_G.PlayerSlow = false
+_G.GhostTouch = false
 
--- Dialog (keep original)
+-- Dialog
 local Dialog = Window:Dialog({
     Icon = "info",
     Title = "Information",
@@ -138,9 +146,9 @@ Window:EditOpenButton({
     Draggable = true
 })
 
-Window:Tag({ Title = "v2.0", Color = Color3.fromHex("#001359"), Radius = 11 })
+Window:Tag({ Title = "v3.0", Color = Color3.fromHex("#001359"), Radius = 11 })
 
--- ========== REACH SECTION (unchanged) ==========
+-- ========== REACH SECTION ==========
 local Section1 = Window:Section({ Title = "Reach", Icon = "biceps-flexed", Opened = false })
 local rTab = Section1:Tab({ Title = "Reach" })
 rTab:Section({ Title = "Reach 100% Safe", Icon = "solar:shield-minimalistic-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
@@ -157,7 +165,7 @@ GkTab:Section({ Title = "Gk Reach Whenever ball is near u U js press dive or smt
 GkTab:Toggle({ Title = "Auto Catch", Default = false, Callback = function(v) _G.AutoCatch = v end })
 GkTab:Slider({ Title = "Reach GK", Step = 0.5, Value = { Min = 0, Max = 15, Default = 5 }, Callback = function(v) _G.GkRange = v end })
 
--- Ball table & reach loop (unchanged)
+-- Ball table & reach loop
 local BallTable = {}
 task.spawn(function()
     while true do  
@@ -210,7 +218,7 @@ task.spawn(function()
     end
 end)
 
--- ========== INFINITE STAMINA (unchanged) ==========
+-- ========== INFINITE STAMINA ==========
 local infSection = Window:Section({ Title = "infinite stamina and more", Icon = "solar:rewind-forward-outline", Opened = false })
 local infTab = infSection:Tab({ Title = "stamina" })
 infTab:Section({ Title = "Infinite Stamina", Icon = "solar:fire-minimalistic-bold-duotone", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
@@ -247,10 +255,10 @@ infTab:Toggle({ Title = "Infinite Stamina", Desc = "Gives Infinite Stamina", Ico
     end
 end })
 
--- ========== BALL TAB (unchanged + ESP) ==========
+-- ========== BALL TAB (enhanced with more options) ==========
 local ballSection = Window:Section({ Title = "Ball Tab", Icon = "solar:football-bold-duotone", Opened = false })
 local ballTab = ballSection:Tab({ Title = "ball resizer" })
-ballTab:Section({ Title = "Ball tab", Icon = "solar:football-bold-duotone", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
+ballTab:Section({ Title = "Ball Control", Icon = "solar:football-bold-duotone", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
 ballTab:Toggle({ Title = "TPS Ball Collision", Desc = "ball collision", Icon = "circle-slash", Type = "Checkbox", Value = false, Callback = function(state)
     local tpsBall = workspace:FindFirstChild("TPSSystem") and workspace.TPSSystem:FindFirstChild("TPS")
     if tpsBall then tpsBall.CollisionGroup = state and "All" or "Ball" end
@@ -294,7 +302,7 @@ end
 ballTab:Button({ Title = "Ball ESP", Desc = "Highlight TPS Ball", Callback = function() highlightTPS() end })
 ballTab:Button({ Title = "Remove ESP", Desc = "Remove TPS Ball highlight", Callback = function() unhighlightTPS() end })
 
--- ========== TELEPORTATION (unchanged) ==========
+-- ========== TELEPORTATION ==========
 local tlSection = Window:Section({ Title = "teleportation", Icon = "solar:accessibility-bold", Opened = false })
 local tlTab = tlSection:Tab({ Title = "teleportation" })
 tlTab:Section({ Title = "teleportation", Icon = "solar:accessibility-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
@@ -313,36 +321,249 @@ tlTab:Button({ Title = "Teleport to BALL", Desc = "Teleports to TPS ball", Callb
     end
 end })
 
--- ========== NEW: DOMINATION TAB ==========
+-- ========== DOMINATION TAB (existing) ==========
 local domSection = Window:Section({ Title = "Domination", Icon = "solar:skull-bold", Opened = false })
 local domTab = domSection:Tab({ Title = "Dominate" })
 domTab:Section({ Title = "Ultimate Control", Icon = "solar:crown-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
-
--- Auto-Score: teleport ball to enemy goal on touch
 domTab:Toggle({ Title = "Auto-Score", Desc = "Ball teleports to enemy goal when you touch it", Icon = "solar:goal-bold", Default = false, Callback = function(v) _G.AutoScore = v end })
-
--- Speed Hack
 domTab:Toggle({ Title = "Speed Hack", Desc = "Multiply your sprint speed", Icon = "solar:running-bold", Default = false, Callback = function(v) _G.SpeedHack = v end })
 domTab:Slider({ Title = "Speed Multiplier", Step = 0.5, Value = { Min = 1, Max = 5, Default = 2 }, Callback = function(v) _G.SpeedMultiplier = v end })
-
--- Ball Magnet
 domTab:Toggle({ Title = "Ball Magnet", Desc = "Ball follows you within range", Icon = "solar:magnet-bold", Default = false, Callback = function(v) _G.BallMagnet = v end })
-
--- Anti-Ragdoll
 domTab:Toggle({ Title = "Anti-Ragdoll", Desc = "Never fall or get tackled", Icon = "solar:shield-bold", Default = false, Callback = function(v) _G.AntiRagdoll = v end })
-
--- Infinite Jump
 domTab:Toggle({ Title = "Infinite Jump", Desc = "Fly like a god", Icon = "solar:wing-bold", Default = false, Callback = function(v) _G.InfiniteJump = v end })
-
--- Enemy Freeze (local visual)
 domTab:Toggle({ Title = "Enemy Freeze", Desc = "Freeze all opponents in place (local)", Icon = "solar:snowflake-bold", Default = false, Callback = function(v) _G.EnemyFreeze = v end })
-
--- Auto-Dribble
 domTab:Toggle({ Title = "Auto-Dribble", Desc = "Ball sticks to your feet", Icon = "solar:football-bold", Default = false, Callback = function(v) _G.AutoDribble = v end })
 
--- ========== DOMINATION LOGIC LOOPS ==========
+-- ========== NEW: GOD MODE TAB ==========
+local godSection = Window:Section({ Title = "God Mode", Icon = "solar:flash-bold", Opened = false })
+local godTab = godSection:Tab({ Title = "Godlike" })
+godTab:Section({ Title = "Divine Powers", Icon = "solar:crown-2-bold", FontWeight = Enum.FontWeight.SemiBold, TextTransparency = 0.05, TextXAlignment = "Left", TextSize = 23, Opened = true })
 
--- Auto-Score
+godTab:Toggle({ Title = "Aimbot Ball", Desc = "Ball auto-curves to enemy goal when you kick", Icon = "solar:target-bold", Default = false, Callback = function(v) _G.AimbotBall = v end })
+godTab:Toggle({ Title = "Wallhack", Desc = "See ball and players through walls (highlight)", Icon = "solar:eye-bold", Default = false, Callback = function(v) _G.Wallhack = v end })
+godTab:Toggle({ Title = "No-Clip", Desc = "Walk through everything", Icon = "solar:ghost-bold", Default = false, Callback = function(v) _G.NoClip = v end })
+godTab:Toggle({ Title = "Telekick", Desc = "Kick ball instantly to enemy goal on touch", Icon = "solar:lightning-bold", Default = false, Callback = function(v) _G.Telekick = v end })
+godTab:Toggle({ Title = "Ball Clone", Desc = "Spawn a duplicate ball that follows enemy", Icon = "solar:copy-bold", Default = false, Callback = function(v) _G.BallClone = v end })
+godTab:Toggle({ Title = "Instant Goal", Desc = "Score every time ball touches you", Icon = "solar:win-bold", Default = false, Callback = function(v) _G.InstantGoal = v end })
+godTab:Toggle({ Title = "Player Slow", Desc = "Slow all opponents to 50% speed", Icon = "solar:clock-bold", Default = false, Callback = function(v) _G.PlayerSlow = v end })
+godTab:Toggle({ Title = "Ghost Touch", Desc = "Steal ball from any distance", Icon = "solar:hand-bold", Default = false, Callback = function(v) _G.GhostTouch = v end })
+
+-- ========== GOD MODE LOGIC LOOPS ==========
+
+-- Aimbot Ball: redirect ball to enemy goal when near
+task.spawn(function()
+    while task.wait(0.05) do
+        if _G.AimbotBall then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, ball in ipairs(BallTable) do
+                    if ball and ball.Parent and (root.Position - ball.Position).Magnitude < 10 then
+                        ball.Velocity = Vector3.new(-50, 10, 0) -- launch toward enemy goal
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Wallhack: highlight all players and ball
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.Wallhack then
+            for _, player in ipairs(Players:GetPlayers()) do
+                local char = player.Character
+                if char then
+                    for _, part in ipairs(char:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            local hl = part:FindFirstChild("WallhackESP")
+                            if not hl then
+                                hl = Instance.new("BoxHandleAdornment")
+                                hl.Name = "WallhackESP"
+                                hl.Size = part.Size + Vector3.new(0.2,0.2,0.2)
+                                hl.AlwaysOnTop = true
+                                hl.ZIndex = 0
+                                hl.Adornee = part
+                                hl.Color3 = player == LocalPlayer and Color3.fromRGB(0,255,0) or Color3.fromRGB(255,0,0)
+                                hl.Transparency = 0.3
+                                hl.Parent = part
+                            end
+                        end
+                    end
+                end
+            end
+            for _, ball in ipairs(BallTable) do
+                if ball and ball.Parent then
+                    local hl = ball:FindFirstChild("WallhackESP")
+                    if not hl then
+                        hl = Instance.new("BoxHandleAdornment")
+                        hl.Name = "WallhackESP"
+                        hl.Size = ball.Size + Vector3.new(0.2,0.2,0.2)
+                        hl.AlwaysOnTop = true
+                        hl.ZIndex = 0
+                        hl.Adornee = ball
+                        hl.Color3 = Color3.fromRGB(255,255,0)
+                        hl.Transparency = 0.3
+                        hl.Parent = ball
+                    end
+                end
+            end
+        else
+            -- remove highlights
+            for _, player in ipairs(Players:GetPlayers()) do
+                local char = player.Character
+                if char then
+                    for _, part in ipairs(char:GetChildren()) do
+                        if part:IsA("BasePart") then
+                            local hl = part:FindFirstChild("WallhackESP")
+                            if hl then hl:Destroy() end
+                        end
+                    end
+                end
+            end
+            for _, ball in ipairs(BallTable) do
+                if ball and ball.Parent then
+                    local hl = ball:FindFirstChild("WallhackESP")
+                    if hl then hl:Destroy() end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- No-Clip
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.NoClip then
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Telekick: on ball touch, launch to enemy goal
+task.spawn(function()
+    while task.wait(0.05) do
+        if _G.Telekick then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, ball in ipairs(BallTable) do
+                    if ball and ball.Parent and (root.Position - ball.Position).Magnitude < 6 then
+                        ball.CFrame = CFrame.new(Vector3.new(-60, 175, 280))
+                        ball.Velocity = Vector3.new(0,0,0)
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Ball Clone: spawn a copy near enemy
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.BallClone then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local char = player.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        local clone = Instance.new("Part")
+                        clone.Size = Vector3.new(2,2,2)
+                        clone.Shape = Enum.PartType.Ball
+                        clone.Color = Color3.fromRGB(255,0,0)
+                        clone.Material = Enum.Material.Neon
+                        clone.Position = root.Position + Vector3.new(0,3,0)
+                        clone.Parent = workspace
+                        task.delay(2, function() clone:Destroy() end)
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Instant Goal: score on any ball touch
+task.spawn(function()
+    while task.wait(0.05) do
+        if _G.InstantGoal then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, ball in ipairs(BallTable) do
+                    if ball and ball.Parent and (root.Position - ball.Position).Magnitude < 5 then
+                        ball.CFrame = CFrame.new(Vector3.new(-60, 175, 280))
+                        ball.Velocity = Vector3.new(0,0,0)
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Player Slow
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.PlayerSlow then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local char = player.Character
+                    if char then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            hum.WalkSpeed = 8
+                        end
+                    end
+                end
+            end
+        else
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local char = player.Character
+                    if char then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            hum.WalkSpeed = 16
+                        end
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- Ghost Touch: steal ball from any distance
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.GhostTouch then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                for _, ball in ipairs(BallTable) do
+                    if ball and ball.Parent then
+                        ball.CFrame = CFrame.new(root.Position + Vector3.new(0, 2, 3))
+                    end
+                end
+            end
+        end
+        task.wait()
+    end
+end)
+
+-- ========== DOMINATION LOGIC (existing, kept) ==========
+-- Auto-Score (override with Instant Goal if both on, but keep)
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoScore then
@@ -351,8 +572,7 @@ task.spawn(function()
             if root then
                 for _, ball in ipairs(BallTable) do
                     if ball and ball.Parent and (root.Position - ball.Position).Magnitude < 8 then
-                        -- Teleport ball to enemy goal (adjust coords as needed)
-                        ball.CFrame = CFrame.new(Vector3.new(-60, 175, 280)) -- enemy goal area
+                        ball.CFrame = CFrame.new(Vector3.new(-60, 175, 280))
                     end
                 end
             end
@@ -397,7 +617,8 @@ task.spawn(function()
         if _G.AntiRagdoll then
             local char = LocalPlayer.Character
             if char then
-                local humanoid and humanoid.PlatformStand then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid and humanoid.PlatformStand then
                     humanoid.PlatformStand = false
                 end
                 for _, part in ipairs(char:GetDescendants()) do
@@ -422,7 +643,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Enemy Freeze (local visual - freeze all other players)
+-- Enemy Freeze
 task.spawn(function()
     while task.wait(0.5) do
         if _G.EnemyFreeze then
@@ -432,7 +653,7 @@ task.spawn(function()
                     if char then
                         local root = char:FindFirstChild("HumanoidRootPart")
                         if root then
-                            root.CFrame = root.CFrame -- keep in place
+                            root.CFrame = root.CFrame
                         end
                         local hum = char:FindFirstChildOfClass("Humanoid")
                         if hum then
@@ -443,7 +664,6 @@ task.spawn(function()
                 end
             end
         else
-            -- unfreeze
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer then
                     local char = player.Character
@@ -479,10 +699,10 @@ task.spawn(function()
     end
 end)
 
--- ========== SETTINGS (unchanged) ==========
+-- ========== SETTINGS ==========
 local TabSe = Window:Tab({ Title = "Settings", Icon = "settings" })
 TabSe:Section({ Title = "Ui Themes", TextXAlignment = "Left", TextSize = 23 })
 local ThemeDropdown = TabSe:Dropdown({ Title = "Select Theme", Values = {"Rainbow","Mellowsi","Cotton Candy","Monokai Pro","Crimson","Midnight","Emerald","Amber","Violet","Sky","Indigo","Red","Plant","Rose","Dark","Light"}, Callback = function(selected) WindUI:SetTheme(selected) end })
 TabSe:Section({ Title = "Script was made by Nexakosss & K R I B L Y", TextXAlignment = "Left", TextSize = 25 })
 
-print("Larps.lat Reborn Enhanced - Evil Mahi says: Play dirty, win harder.")
+print("Larps.lat Reborn Advanced - Evil Mahi says: The pitch is your throne.")
