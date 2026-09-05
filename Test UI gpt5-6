@@ -1,0 +1,342 @@
+-- Advanced RGB Tab UI System for Roblox
+-- Features: Toggle button, 5 tabs, RGB color system, animations, and modern design
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Color Configuration (RGB)
+local Colors = {
+	Primary = Color3.fromRGB(100, 200, 255),
+	Secondary = Color3.fromRGB(50, 150, 200),
+	Accent = Color3.fromRGB(255, 100, 200),
+	Background = Color3.fromRGB(20, 20, 30),
+	DarkBackground = Color3.fromRGB(10, 10, 15),
+	Text = Color3.fromRGB(255, 255, 255),
+	TabInactive = Color3.fromRGB(60, 60, 80),
+	Success = Color3.fromRGB(100, 255, 150),
+	Warning = Color3.fromRGB(255, 200, 100),
+	Error = Color3.fromRGB(255, 100, 100),
+}
+
+-- UI State
+local UIState = {
+	isOpen = false,
+	currentTab = 1,
+	rgbColor = {r = 100, g = 200, b = 255},
+}
+
+-- Create Main Screen GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AdvancedTabUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Create Toggle Button
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(0, 50, 0, 50)
+toggleButton.Position = UDim2.new(0, 20, 0, 20)
+toggleButton.BackgroundColor3 = Colors.Primary
+toggleButton.BackgroundTransparency = 0.2
+toggleButton.TextColor3 = Colors.Text
+toggleButton.Text = "◆"
+toggleButton.TextSize = 24
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.Parent = screenGui
+
+-- Add Corner to toggle button
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 12)
+toggleCorner.Parent = toggleButton
+
+-- Add Stroke to toggle button
+local toggleStroke = Instance.new("UIStroke")
+toggleStroke.Color = Colors.Primary
+toggleStroke.Thickness = 2
+toggleStroke.Parent = toggleButton
+
+-- Create Main Panel
+local mainPanel = Instance.new("Frame")
+mainPanel.Name = "MainPanel"
+mainPanel.Size = UDim2.new(0, 500, 0, 600)
+mainPanel.Position = UDim2.new(0.5, -250, 0.5, -300)
+mainPanel.BackgroundColor3 = Colors.Background
+mainPanel.BackgroundTransparency = 0.1
+mainPanel.Visible = false
+mainPanel.Parent = screenGui
+
+-- Add Corner to main panel
+local panelCorner = Instance.new("UICorner")
+panelCorner.CornerRadius = UDim.new(0, 15)
+panelCorner.Parent = mainPanel
+
+-- Add Stroke to main panel
+local panelStroke = Instance.new("UIStroke")
+panelStroke.Color = Colors.Primary
+panelStroke.Thickness = 2
+panelStroke.Parent = mainPanel
+
+-- Create Header
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 60)
+header.BackgroundColor3 = Colors.Secondary
+header.BackgroundTransparency = 0.3
+header.Parent = mainPanel
+
+local headerTitle = Instance.new("TextLabel")
+headerTitle.Name = "Title"
+headerTitle.Size = UDim2.new(1, -20, 1, 0)
+headerTitle.Position = UDim2.new(0, 10, 0, 0)
+headerTitle.BackgroundTransparency = 1
+headerTitle.TextColor3 = Colors.Text
+headerTitle.Text = "⚙️ Advanced Control Panel"
+headerTitle.TextSize = 18
+headerTitle.Font = Enum.Font.GothamBold
+headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+headerTitle.Parent = header
+
+-- Create Close Button
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 40, 0, 40)
+closeButton.Position = UDim2.new(1, -50, 0, 10)
+closeButton.BackgroundColor3 = Colors.Error
+closeButton.BackgroundTransparency = 0.3
+closeButton.TextColor3 = Colors.Text
+closeButton.Text = "✕"
+closeButton.TextSize = 16
+closeButton.Font = Enum.Font.GothamBold
+closeButton.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeButton
+
+-- Create Tab Buttons Container
+local tabButtonsContainer = Instance.new("Frame")
+tabButtonsContainer.Name = "TabButtons"
+tabButtonsContainer.Size = UDim2.new(1, 0, 0, 50)
+tabButtonsContainer.Position = UDim2.new(0, 0, 0, 60)
+tabButtonsContainer.BackgroundColor3 = Colors.DarkBackground
+tabButtonsContainer.BackgroundTransparency = 0.5
+tabButtonsContainer.Parent = mainPanel
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+tabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+tabLayout.Padding = UDim.new(0, 5)
+tabLayout.Parent = tabButtonsContainer
+
+-- Tab Names
+local tabNames = {"Home", "Colors", "Settings", "Stats", "About"}
+
+-- Create Tab Buttons
+local tabButtons = {}
+for i, tabName in ipairs(tabNames) do
+	local tabButton = Instance.new("TextButton")
+	tabButton.Name = "Tab" .. i
+	tabButton.Size = UDim2.new(0, 80, 1, -10)
+	tabButton.BackgroundColor3 = Colors.TabInactive
+	tabButton.BackgroundTransparency = 0.5
+	tabButton.TextColor3 = Colors.Text
+	tabButton.Text = tabName
+	tabButton.TextSize = 12
+	tabButton.Font = Enum.Font.GothamBold
+	tabButton.Parent = tabButtonsContainer
+	
+	local tabCorner = Instance.new("UICorner")
+	tabCorner.CornerRadius = UDim.new(0, 8)
+	tabCorner.Parent = tabButton
+	
+	tabButtons[i] = tabButton
+end
+
+-- Create Content Area
+local contentArea = Instance.new("Frame")
+contentArea.Name = "ContentArea"
+contentArea.Size = UDim2.new(1, -20, 1, -130)
+contentArea.Position = UDim2.new(0, 10, 0, 120)
+contentArea.BackgroundTransparency = 1
+contentArea.Parent = mainPanel
+
+-- Create Tab Content Frames
+local tabContents = {}
+for i, tabName in ipairs(tabNames) do
+	local tabContent = Instance.new("Frame")
+	tabContent.Name = "Tab" .. i .. "Content"
+	tabContent.Size = UDim2.new(1, 0, 1, 0)
+	tabContent.BackgroundTransparency = 1
+	tabContent.Visible = (i == 1)
+	tabContent.Parent = contentArea
+	
+	tabContents[i] = tabContent
+end
+
+-- ========== TAB 1: HOME ==========
+local function createHomeTab()
+	local tab = tabContents[1]
+	
+	local welcomeLabel = Instance.new("TextLabel")
+	welcomeLabel.Name = "WelcomeLabel"
+	welcomeLabel.Size = UDim2.new(1, 0, 0, 40)
+	welcomeLabel.Position = UDim2.new(0, 0, 0, 10)
+	welcomeLabel.BackgroundTransparency = 1
+	welcomeLabel.TextColor3 = Colors.Text
+	welcomeLabel.Text = "Welcome to Advanced UI System"
+	welcomeLabel.TextSize = 16
+	welcomeLabel.Font = Enum.Font.GothamBold
+	welcomeLabel.Parent = tab
+	
+	local descLabel = Instance.new("TextLabel")
+	descLabel.Name = "DescriptionLabel"
+	descLabel.Size = UDim2.new(1, 0, 0, 80)
+	descLabel.Position = UDim2.new(0, 0, 0, 60)
+	descLabel.BackgroundTransparency = 1
+	descLabel.TextColor3 = Colors.Text
+	descLabel.Text = "This is an advanced UI system with 5 tabs, RGB color support, and smooth animations. Navigate through the tabs to explore different features!"
+	descLabel.TextSize = 12
+	descLabel.Font = Enum.Font.Gotham
+	descLabel.TextWrapped = true
+	descLabel.TextYAlignment = Enum.TextYAlignment.Top
+	descLabel.Parent = tab
+	
+	local statusLabel = Instance.new("TextLabel")
+	statusLabel.Name = "StatusLabel"
+	statusLabel.Size = UDim2.new(1, 0, 0, 30)
+	statusLabel.Position = UDim2.new(0, 0, 0, 160)
+	statusLabel.BackgroundColor3 = Colors.Success
+	statusLabel.BackgroundTransparency = 0.5
+	statusLabel.TextColor3 = Colors.Text
+	statusLabel.Text = "✓ System Status: Online"
+	statusLabel.TextSize = 12
+	statusLabel.Font = Enum.Font.GothamBold
+	statusLabel.Parent = tab
+	
+	local statusCorner = Instance.new("UICorner")
+	statusCorner.CornerRadius = UDim.new(0, 8)
+	statusCorner.Parent = statusLabel
+end
+
+-- ========== TAB 2: COLORS ==========
+local function createColorsTab()
+	local tab = tabContents[2]
+	
+	local colorLabel = Instance.new("TextLabel")
+	colorLabel.Name = "ColorLabel"
+	colorLabel.Size = UDim2.new(1, 0, 0, 30)
+	colorLabel.Position = UDim2.new(0, 0, 0, 10)
+	colorLabel.BackgroundTransparency = 1
+	colorLabel.TextColor3 = Colors.Text
+	colorLabel.Text = "RGB Color Picker"
+	colorLabel.TextSize = 14
+	colorLabel.Font = Enum.Font.GothamBold
+	colorLabel.Parent = tab
+	
+	-- Red Slider
+	local redLabel = Instance.new("TextLabel")
+	redLabel.Name = "RedLabel"
+	redLabel.Size = UDim2.new(0, 30, 0, 20)
+	redLabel.Position = UDim2.new(0, 0, 0, 50)
+	redLabel.BackgroundTransparency = 1
+	redLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+	redLabel.Text = "R:"
+	redLabel.TextSize = 12
+	redLabel.Font = Enum.Font.GothamBold
+	redLabel.Parent = tab
+	
+	local redSlider = Instance.new("TextBox")
+	redSlider.Name = "RedSlider"
+	redSlider.Size = UDim2.new(1, -50, 0, 20)
+	redSlider.Position = UDim2.new(0, 40, 0, 50)
+	redSlider.BackgroundColor3 = Colors.TabInactive
+	redSlider.BackgroundTransparency = 0.3
+	redSlider.TextColor3 = Colors.Text
+	redSlider.Text = tostring(UIState.rgbColor.r)
+	redSlider.TextSize = 12
+	redSlider.Font = Enum.Font.Gotham
+	redSlider.Parent = tab
+	
+	local redCorner = Instance.new("UICorner")
+	redCorner.CornerRadius = UDim.new(0, 6)
+	redCorner.Parent = redSlider
+	
+	-- Green Slider
+	local greenLabel = Instance.new("TextLabel")
+	greenLabel.Name = "GreenLabel"
+	greenLabel.Size = UDim2.new(0, 30, 0, 20)
+	greenLabel.Position = UDim2.new(0, 0, 0, 85)
+	greenLabel.BackgroundTransparency = 1
+	greenLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+	greenLabel.Text = "G:"
+	greenLabel.TextSize = 12
+	greenLabel.Font = Enum.Font.GothamBold
+	greenLabel.Parent = tab
+	
+	local greenSlider = Instance.new("TextBox")
+	greenSlider.Name = "GreenSlider"
+	greenSlider.Size = UDim2.new(1, -50, 0, 20)
+	greenSlider.Position = UDim2.new(0, 40, 0, 85)
+	greenSlider.BackgroundColor3 = Colors.TabInactive
+	greenSlider.BackgroundTransparency = 0.3
+	greenSlider.TextColor3 = Colors.Text
+	greenSlider.Text = tostring(UIState.rgbColor.g)
+	greenSlider.TextSize = 12
+	greenSlider.Font = Enum.Font.Gotham
+	greenSlider.Parent = tab
+	
+	local greenCorner = Instance.new("UICorner")
+	greenCorner.CornerRadius = UDim.new(0, 6)
+	greenCorner.Parent = greenSlider
+	
+	-- Blue Slider
+	local blueLabel = Instance.new("TextLabel")
+	blueLabel.Name = "BlueLabel"
+	blueLabel.Size = UDim2.new(0, 30, 0, 20)
+	blueLabel.Position = UDim2.new(0, 0, 0, 120)
+	blueLabel.BackgroundTransparency = 1
+	blueLabel.TextColor3 = Color3.fromRGB(100, 100, 255)
+	blueLabel.Text = "B:"
+	blueLabel.TextSize = 12
+	blueLabel.Font = Enum.Font.GothamBold
+	blueLabel.Parent = tab
+	
+	local blueSlider = Instance.new("TextBox")
+	blueSlider.Name = "BlueSlider"
+	blueSlider.Size = UDim2.new(1, -50, 0, 20)
+	blueSlider.Position = UDim2.new(0, 40, 0, 120)
+	blueSlider.BackgroundColor3 = Colors.TabInactive
+	blueSlider.BackgroundTransparency = 0.3
+	blueSlider.TextColor3 = Colors.Text
+	blueSlider.Text = tostring(UIState.rgbColor.b)
+	blueSlider.TextSize = 12
+	blueSlider.Font = Enum.Font.Gotham
+	blueSlider.Parent = tab
+	
+	local blueCorner = Instance.new("UICorner")
+	blueCorner.CornerRadius = UDim.new(0, 6)
+	blueCorner.Parent = blueSlider
+	
+	-- Color Preview
+	local previewLabel = Instance.new("TextLabel")
+	previewLabel.Name = "PreviewLabel"
+	previewLabel.Size = UDim2.new(1, 0, 0, 20)
+	previewLabel.Position = UDim2.new(0, 0, 0, 160)
+	previewLabel.BackgroundTransparency = 1
+	previewLabel.TextColor3 = Colors.Text
+	previewLabel.Text = "Color Preview:"
+	previewLabel.TextSize = 11
+	previewLabel.Font = Enum.Font.GothamBold
+	previewLabel.Parent = tab
+	
+	local colorPreview = Instance.new("Frame")
+	colorPreview.Name = "ColorPreview"
+	colorPreview.Size = UDim2.new(1, 0, 0, 50)
+	colorPreview.Position = UDim2.new(0, 0, 0, 185)
+	colorPreview.BackgroundColor3 = Color3.fromRGB(UIState.rgbColor.r, UIState.rgbColor.g, UIState.rgbColor.b)
+	colorPreview.Parent
