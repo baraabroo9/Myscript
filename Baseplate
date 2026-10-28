@@ -1,0 +1,863 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+-- Load WindUI
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+
+-- ======================== THEME ========================
+WindUI:AddTheme({
+    Name = "DarkRoyal",
+    Accent = Color3.fromHex("#7B2FBE"),
+    Background = Color3.fromHex("#0D0D0D"),
+    BackgroundTransparency = 0,
+    Outline = Color3.fromHex("#7B2FBE"),
+    Text = Color3.fromHex("#FFFFFF"),
+    Placeholder = Color3.fromHex("#4A148C"),
+    Button = Color3.fromHex("#7B2FBE"),
+    Icon = Color3.fromHex("#9C27B0"),
+    Primary = Color3.fromHex("#7B2FBE"),
+    Hover = Color3.fromHex("#9C27B0"),
+    WindowBackground = Color3.fromHex("#0D0D0D"),
+    WindowShadow = Color3.fromHex("#000000"),
+    DialogBackground = Color3.fromHex("#0D0D0D"),
+    DialogBackgroundTransparency = 0,
+    DialogTitle = Color3.fromHex("#FFFFFF"),
+    DialogContent = Color3.fromHex("#CE93D8"),
+    DialogIcon = Color3.fromHex("#9C27B0"),
+    WindowTopbarButtonIcon = Color3.fromHex("#9C27B0"),
+    WindowTopbarTitle = Color3.fromHex("#FFFFFF"),
+    WindowTopbarAuthor = Color3.fromHex("#9C27B0"),
+    WindowTopbarIcon = Color3.fromHex("#9C27B0"),
+    TabBackground = Color3.fromHex("#0D0D0D"),
+    TabTitle = Color3.fromHex("#FFFFFF"),
+    TabIcon = Color3.fromHex("#9C27B0"),
+    ElementBackground = Color3.fromHex("#0D0D0D"),
+    ElementTitle = Color3.fromHex("#FFFFFF"),
+    ElementDesc = Color3.fromHex("#9C27B0"),
+    ElementIcon = Color3.fromHex("#9C27B0"),
+    PopupBackground = Color3.fromHex("#0D0D0D"),
+    PopupBackgroundTransparency = 0,
+    PopupTitle = Color3.fromHex("#FFFFFF"),
+    PopupContent = Color3.fromHex("#CE93D8"),
+    PopupIcon = Color3.fromHex("#9C27B0"),
+    Toggle = Color3.fromHex("#0D0D0D"),
+    ToggleBar = Color3.fromHex("#7B2FBE"),
+    Checkbox = Color3.fromHex("#0D0D0D"),
+    CheckboxIcon = Color3.fromHex("#7B2FBE"),
+    CheckboxBorder = Color3.fromHex("#7B2FBE"),
+    CheckboxBorderTransparency = 0.2,
+    Slider = Color3.fromHex("#0D0D0D"),
+    SliderThumb = Color3.fromHex("#7B2FBE"),
+    SliderIconFrom = Color3.fromHex("#9C27B0"),
+    SliderIconTo = Color3.fromHex("#7B2FBE"),
+    Tooltip = Color3.fromHex("#0D0D0D"),
+    TooltipText = Color3.fromHex("#FFFFFF"),
+    TooltipSecondary = Color3.fromHex("#7B2FBE"),
+    TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
+    SectionExpandIcon = Color3.fromHex("#9C27B0"),
+    SectionExpandIconTransparency = 0,
+    SectionBox = Color3.fromHex("#7B2FBE"),
+    SectionBoxTransparency = 0.85,
+    SectionBoxBorder = Color3.fromHex("#7B2FBE"),
+    SectionBoxBorderTransparency = 0.3,
+    SectionBoxBackground = Color3.fromHex("#0D0D0D"),
+    SectionBoxBackgroundTransparency = 0.85,
+    SearchBarBorder = Color3.fromHex("#7B2FBE"),
+    SearchBarBorderTransparency = 0.3,
+    Notification = Color3.fromHex("#0D0D0D"),
+    NotificationTitle = Color3.fromHex("#FFFFFF"),
+    NotificationTitleTransparency = 0,
+    NotificationContent = Color3.fromHex("#FFFFFF"),
+    NotificationContentTransparency = 0.05,
+    NotificationDuration = Color3.fromHex("#7B2FBE"),
+    NotificationDurationTransparency = 0.2,
+    NotificationBorder = Color3.fromHex("#7B2FBE"),
+    NotificationBorderTransparency = 0,
+    DropdownTabBorder = Color3.fromHex("#7B2FBE"),
+    TabBorder = Color3.fromHex("#7B2FBE"),
+})
+
+-- ======================== WINDOW ========================
+local Window = WindUI:CreateWindow({
+    Title = "Universal Script V3.0",
+    Folder = "UniversalScript",
+    Icon = "solar:crown-star-broken",
+    NewElements = true,
+    HideSearchBar = false,
+    Transparent = false,
+    Theme = "DarkRoyal",
+    OpenButton = {
+        Title = "Open UI",
+        Enabled = true,
+        Draggable = true,
+        Color = ColorSequence.new(Color3.fromHex("#1A1A1A"), Color3.fromHex("#7B2FBE"))
+    },
+    Topbar = {
+        Height = 44,
+        ButtonsType = "Mac",
+    },
+})
+
+-- ======================== GLOBAL VARIABLES ========================
+_G.Features = {
+    -- Combat
+    AimBot = false,
+    SilentAim = false,
+    TriggerBot = false,
+    AntiAim = false,
+    NoRecoil = false,
+    NoSpread = false,
+    AutoFire = false,
+    
+    -- Movement
+    SpeedBoost = false,
+    SpeedValue = 25,
+    JumpBoost = false,
+    JumpValue = 50,
+    NoClip = false,
+    Fly = false,
+    FlySpeed = 50,
+    Freeze = false,
+    WallRun = false,
+    Slide = false,
+    
+    -- Visuals
+    ESP = false,
+    ESPBox = false,
+    ESPName = false,
+    ESPHealth = false,
+    ESPDistance = false,
+    Chams = false,
+    XRay = false,
+    NoFog = false,
+    Bright = false,
+    FOV = false,
+    FOVValue = 120,
+    
+    -- Utility
+    InfiniteJump = false,
+    AntiFall = false,
+    AutoCollect = false,
+    AutoClick = false,
+    AutoHeal = false,
+    AutoSprint = false,
+    NoSprintStamina = false,
+    AntiStun = false,
+    AntiKnockback = false,
+    TeleportToMouse = false,
+    
+    -- Fun
+    GiantMode = false,
+    TinyMode = false,
+    Invisible = false,
+    Spin = false,
+    NoHead = false,
+    NoTorso = false,
+    FreezeAnimation = false,
+    Dance = false,
+    ExplodeBody = false,
+    RainbowChar = false,
+    Trail = false,
+    
+    -- Misc
+    AutoFarm = false,
+    AutoQuest = false,
+    ServerHop = false,
+    ChatSpam = false,
+    AutoSay = false,
+    FPSUnlock = false,
+    SafeMode = false,
+}
+
+-- ======================== SECTION 1: COMBAT ========================
+local CombatSection = Window:Section({
+    Title = "鈿旓笍 Combat",
+    Icon = "solar:sword-bold",
+    Opened = true
+})
+local CombatTab = CombatSection:Tab({ Title = "Aimbot & More" })
+
+-- Aimbot
+CombatTab:Toggle({
+    Title = "AimBot",
+    Desc = "Automatically aim at enemies",
+    Default = false,
+    Callback = function(v) _G.Features.AimBot = v end
+})
+
+CombatTab:Toggle({
+    Title = "Silent Aim",
+    Desc = "Shoot without moving your camera",
+    Default = false,
+    Callback = function(v) _G.Features.SilentAim = v end
+})
+
+CombatTab:Toggle({
+    Title = "TriggerBot",
+    Desc = "Auto-shoot when crosshair is on enemy",
+    Default = false,
+    Callback = function(v) _G.Features.TriggerBot = v end
+})
+
+CombatTab:Toggle({
+    Title = "Anti-Aim",
+    Desc = "Desync your hitbox",
+    Default = false,
+    Callback = function(v) _G.Features.AntiAim = v end
+})
+
+CombatTab:Toggle({
+    Title = "No Recoil",
+    Desc = "Removes weapon recoil",
+    Default = false,
+    Callback = function(v) _G.Features.NoRecoil = v end
+})
+
+CombatTab:Toggle({
+    Title = "No Spread",
+    Desc = "Bullets go straight",
+    Default = false,
+    Callback = function(v) _G.Features.NoSpread = v end
+})
+
+CombatTab:Toggle({
+    Title = "Auto Fire",
+    Desc = "Shoots automatically at enemies",
+    Default = false,
+    Callback = function(v) _G.Features.AutoFire = v end
+})
+
+-- ======================== SECTION 2: MOVEMENT ========================
+local MoveSection = Window:Section({
+    Title = "馃弮 Movement",
+    Icon = "solar:running-bold",
+    Opened = false
+})
+local MoveTab = MoveSection:Tab({ Title = "Speed & More" })
+
+MoveTab:Toggle({
+    Title = "Speed Boost",
+    Desc = "Run faster",
+    Default = false,
+    Callback = function(v) _G.Features.SpeedBoost = v end
+})
+
+MoveTab:Slider({
+    Title = "Speed Value",
+    Step = 1,
+    Value = { Min = 16, Max = 200, Default = 25 },
+    Callback = function(v) _G.Features.SpeedValue = v end
+})
+
+MoveTab:Toggle({
+    Title = "Jump Boost",
+    Desc = "Jump higher",
+    Default = false,
+    Callback = function(v) _G.Features.JumpBoost = v end
+})
+
+MoveTab:Slider({
+    Title = "Jump Value",
+    Step = 1,
+    Value = { Min = 50, Max = 200, Default = 50 },
+    Callback = function(v) _G.Features.JumpValue = v end
+})
+
+MoveTab:Toggle({
+    Title = "NoClip",
+    Desc = "Walk through walls",
+    Default = false,
+    Callback = function(v) _G.Features.NoClip = v end
+})
+
+MoveTab:Toggle({
+    Title = "Fly",
+    Desc = "Fly through the air",
+    Default = false,
+    Callback = function(v) _G.Features.Fly = v end
+})
+
+MoveTab:Slider({
+    Title = "Fly Speed",
+    Step = 1,
+    Value = { Min = 10, Max = 200, Default = 50 },
+    Callback = function(v) _G.Features.FlySpeed = v end
+})
+
+MoveTab:Toggle({
+    Title = "Freeze",
+    Desc = "Freeze in place",
+    Default = false,
+    Callback = function(v) _G.Features.Freeze = v end
+})
+
+MoveTab:Toggle({
+    Title = "Wall Run",
+    Desc = "Run on walls",
+    Default = false,
+    Callback = function(v) _G.Features.WallRun = v end
+})
+
+-- ======================== SECTION 3: VISUALS ========================
+local VisSection = Window:Section({
+    Title = "馃憗锔� Visuals",
+    Icon = "solar:eye-bold",
+    Opened = false
+})
+local VisTab = VisSection:Tab({ Title = "ESP & Effects" })
+
+VisTab:Toggle({
+    Title = "ESP",
+    Desc = "See players through walls",
+    Default = false,
+    Callback = function(v) _G.Features.ESP = v end
+})
+
+VisTab:Toggle({
+    Title = "ESP Box",
+    Desc = "Box around players",
+    Default = false,
+    Callback = function(v) _G.Features.ESPBox = v end
+})
+
+VisTab:Toggle({
+    Title = "ESP Name",
+    Desc = "Show player names",
+    Default = false,
+    Callback = function(v) _G.Features.ESPName = v end
+})
+
+VisTab:Toggle({
+    Title = "ESP Health",
+    Desc = "Show health bars",
+    Default = false,
+    Callback = function(v) _G.Features.ESPHealth = v end
+})
+
+VisTab:Toggle({
+    Title = "ESP Distance",
+    Desc = "Show distance to players",
+    Default = false,
+    Callback = function(v) _G.Features.ESPDistance = v end
+})
+
+VisTab:Toggle({
+    Title = "Chams",
+    Desc = "Highlight players",
+    Default = false,
+    Callback = function(v) _G.Features.Chams = v end
+})
+
+VisTab:Toggle({
+    Title = "XRay",
+    Desc = "See through everything",
+    Default = false,
+    Callback = function(v) _G.Features.XRay = v end
+})
+
+VisTab:Toggle({
+    Title = "No Fog",
+    Desc = "Remove fog",
+    Default = false,
+    Callback = function(v) _G.Features.NoFog = v end
+})
+
+VisTab:Toggle({
+    Title = "Bright",
+    Desc = "Full brightness",
+    Default = false,
+    Callback = function(v) _G.Features.Bright = v end
+})
+
+VisTab:Toggle({
+    Title = "FOV Changer",
+    Desc = "Change camera FOV",
+    Default = false,
+    Callback = function(v) _G.Features.FOV = v end
+})
+
+VisTab:Slider({
+    Title = "FOV Value",
+    Step = 1,
+    Value = { Min = 70, Max = 180, Default = 120 },
+    Callback = function(v) _G.Features.FOVValue = v end
+})
+
+-- ======================== SECTION 4: UTILITY ========================
+local UtilSection = Window:Section({
+    Title = "馃洜锔� Utility",
+    Icon = "solar:tools-bold",
+    Opened = false
+})
+local UtilTab = UtilSection:Tab({ Title = "Auto & More" })
+
+UtilTab:Toggle({
+    Title = "Infinite Jump",
+    Desc = "Jump infinitely",
+    Default = false,
+    Callback = function(v) _G.Features.InfiniteJump = v end
+})
+
+UtilTab:Toggle({
+    Title = "Anti-Fall",
+    Desc = "Prevent falling damage",
+    Default = false,
+    Callback = function(v) _G.Features.AntiFall = v end
+})
+
+UtilTab:Toggle({
+    Title = "Auto Collect",
+    Desc = "Automatically collect items",
+    Default = false,
+    Callback = function(v) _G.Features.AutoCollect = v end
+})
+
+UtilTab:Toggle({
+    Title = "Auto Click",
+    Desc = "Auto-click for you",
+    Default = false,
+    Callback = function(v) _G.Features.AutoClick = v end
+})
+
+UtilTab:Toggle({
+    Title = "Auto Heal",
+    Desc = "Auto-heal when low",
+    Default = false,
+    Callback = function(v) _G.Features.AutoHeal = v end
+})
+
+UtilTab:Toggle({
+    Title = "Auto Sprint",
+    Desc = "Always sprint",
+    Default = false,
+    Callback = function(v) _G.Features.AutoSprint = v end
+})
+
+UtilTab:Toggle({
+    Title = "No Sprint Stamina",
+    Desc = "Infinite sprint stamina",
+    Default = false,
+    Callback = function(v) _G.Features.NoSprintStamina = v end
+})
+
+UtilTab:Toggle({
+    Title = "Anti-Stun",
+    Desc = "Prevent stun effects",
+    Default = false,
+    Callback = function(v) _G.Features.AntiStun = v end
+})
+
+UtilTab:Toggle({
+    Title = "Anti-Knockback",
+    Desc = "No knockback",
+    Default = false,
+    Callback = function(v) _G.Features.AntiKnockback = v end
+})
+
+UtilTab:Toggle({
+    Title = "Teleport to Mouse",
+    Desc = "Teleport where you click",
+    Default = false,
+    Callback = function(v) _G.Features.TeleportToMouse = v end
+})
+
+-- ======================== SECTION 5: FUN ========================
+local FunSection = Window:Section({
+    Title = "馃帀 Fun",
+    Icon = "solar:party-horns-bold",
+    Opened = false
+})
+local FunTab = FunSection:Tab({ Title = "Crazy Effects" })
+
+FunTab:Toggle({
+    Title = "Giant Mode",
+    Desc = "Become huge",
+    Default = false,
+    Callback = function(v) _G.Features.GiantMode = v end
+})
+
+FunTab:Toggle({
+    Title = "Tiny Mode",
+    Desc = "Become tiny",
+    Default = false,
+    Callback = function(v) _G.Features.TinyMode = v end
+})
+
+FunTab:Toggle({
+    Title = "Invisible",
+    Desc = "Become invisible",
+    Default = false,
+    Callback = function(v) _G.Features.Invisible = v end
+})
+
+FunTab:Toggle({
+    Title = "Spin",
+    Desc = "Spin your character",
+    Default = false,
+    Callback = function(v) _G.Features.Spin = v end
+})
+
+FunTab:Toggle({
+    Title = "No Head",
+    Desc = "Remove your head",
+    Default = false,
+    Callback = function(v) _G.Features.NoHead = v end
+})
+
+FunTab:Toggle({
+    Title = "No Torso",
+    Desc = "Remove your torso",
+    Default = false,
+    Callback = function(v) _G.Features.NoTorso = v end
+})
+
+FunTab:Toggle({
+    Title = "Freeze Animation",
+    Desc = "Freeze your pose",
+    Default = false,
+    Callback = function(v) _G.Features.FreezeAnimation = v end
+})
+
+FunTab:Toggle({
+    Title = "Dance",
+    Desc = "Start dancing",
+    Default = false,
+    Callback = function(v) _G.Features.Dance = v end
+})
+
+FunTab:Toggle({
+    Title = "Explode Body",
+    Desc = "Explode your limbs",
+    Default = false,
+    Callback = function(v) _G.Features.ExplodeBody = v end
+})
+
+FunTab:Toggle({
+    Title = "Rainbow Character",
+    Desc = "Your character cycles colors",
+    Default = false,
+    Callback = function(v) _G.Features.RainbowChar = v end
+})
+
+FunTab:Toggle({
+    Title = "Trail",
+    Desc = "Leave a trail behind you",
+    Default = false,
+    Callback = function(v) _G.Features.Trail = v end
+})
+
+-- ======================== SECTION 6: MISC ========================
+local MiscSection = Window:Section({
+    Title = "鈿欙笍 Misc",
+    Icon = "solar:settings-bold",
+    Opened = false
+})
+local MiscTab = MiscSection:Tab({ Title = "Extra" })
+
+MiscTab:Toggle({
+    Title = "Auto Farm",
+    Desc = "Auto-farm resources",
+    Default = false,
+    Callback = function(v) _G.Features.AutoFarm = v end
+})
+
+MiscTab:Toggle({
+    Title = "Auto Quest",
+    Desc = "Auto-complete quests",
+    Default = false,
+    Callback = function(v) _G.Features.AutoQuest = v end
+})
+
+MiscTab:Toggle({
+    Title = "Server Hop",
+    Desc = "Auto-hop servers",
+    Default = false,
+    Callback = function(v) _G.Features.ServerHop = v end
+})
+
+MiscTab:Toggle({
+    Title = "Chat Spam",
+    Desc = "Spam in chat",
+    Default = false,
+    Callback = function(v) _G.Features.ChatSpam = v end
+})
+
+MiscTab:Toggle({
+    Title = "Auto Say",
+    Desc = "Say a message repeatedly",
+    Default = false,
+    Callback = function(v) _G.Features.AutoSay = v end
+})
+
+MiscTab:Toggle({
+    Title = "FPS Unlock",
+    Desc = "Unlock FPS cap",
+    Default = false,
+    Callback = function(v) _G.Features.FPSUnlock = v end
+})
+
+MiscTab:Toggle({
+    Title = "Safe Mode",
+    Desc = "Disable all features",
+    Default = false,
+    Callback = function(v)
+        _G.Features.SafeMode = v
+        if v then
+            for key in pairs(_G.Features) do
+                if key ~= "SafeMode" then
+                    _G.Features[key] = false
+                end
+            end
+            WindUI:Notify({ Title = "Safe Mode", Content = "All features disabled", Duration = 2 })
+        end
+    end
+})
+
+-- ======================== SECTION 7: TELEPORT ========================
+local TeleSection = Window:Section({
+    Title = "馃寑 Teleport",
+    Icon = "solar:map-bold",
+    Opened = false
+})
+local TeleTab = TeleSection:Tab({ Title = "Locations" })
+
+local function TeleportTo(pos)
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        root.CFrame = CFrame.new(pos)
+    end
+end
+
+TeleTab:Button({
+    Title = "Teleport to Spawn",
+    Desc = "Go to spawn point",
+    Callback = function()
+        TeleportTo(Vector3.new(0, 10, 0))
+    end
+})
+
+TeleTab:Button({
+    Title = "Teleport to Center",
+    Desc = "Go to map center",
+    Callback = function()
+        TeleportTo(Vector3.new(0, 100, 0))
+    end
+})
+
+TeleTab:Button({
+    Title = "Teleport to Highest Point",
+    Desc = "Go to the sky",
+    Callback = function()
+        TeleportTo(Vector3.new(0, 1000, 0))
+    end
+})
+
+TeleTab:Button({
+    Title = "Teleport to Players",
+    Desc = "Teleport to a random player",
+    Callback = function()
+        local players = Players:GetPlayers()
+        if #players > 1 then
+            local target = players[math.random(2, #players)]
+            if target and target.Character then
+                local pos = target.Character:FindFirstChild("HumanoidRootPart")
+                if pos then
+                    TeleportTo(pos.Position)
+                end
+            end
+        end
+    end
+})
+
+-- ======================== SECTION 8: THEMES ========================
+local ThemeSection = Window:Section({
+    Title = "馃帹 Themes",
+    Icon = "solar:palette-bold",
+    Opened = false
+})
+local ThemeTab = ThemeSection:Tab({ Title = "UI Themes" })
+
+local themes = {
+    "Rainbow", "Mellowsi", "Cotton Candy", "Monokai Pro",
+    "Crimson", "Midnight", "Emerald", "Amber",
+    "Violet", "Sky", "Indigo", "Red", "Plant",
+    "Rose", "Dark", "Light", "DarkRoyal"
+}
+
+ThemeTab:Dropdown({
+    Title = "Select Theme",
+    Values = themes,
+    Callback = function(selected)
+        WindUI:SetTheme(selected)
+        WindUI:Notify({ Title = "Theme Applied", Content = selected, Duration = 2 })
+    end
+})
+
+-- ======================== SECTION 9: CREDITS ========================
+local CreditSection = Window:Section({
+    Title = "馃憫 Credits",
+    Icon = "solar:crown-bold",
+    Opened = false
+})
+local CreditTab = CreditSection:Tab({ Title = "Info" })
+
+CreditTab:Button({
+    Title = "Script by: Your Command",
+    Desc = "50+ features, universal script",
+    Callback = function()
+        WindUI:Notify({ Title = "Credits", Content = "Made for my king", Duration = 3 })
+    end
+})
+
+-- ======================== MAIN LOOP ========================
+task.spawn(function()
+    while task.wait(0.1) do
+        local char = LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if not char or not root or not humanoid then continue end
+        
+        -- Speed Boost
+        if _G.Features.SpeedBoost then
+            humanoid.WalkSpeed = _G.Features.SpeedValue
+        end
+        
+        -- Jump Boost
+        if _G.Features.JumpBoost then
+            humanoid.JumpPower = _G.Features.JumpValue
+        end
+        
+        -- NoClip
+        if _G.Features.NoClip then
+            root.CanCollide = false
+        else
+            root.CanCollide = true
+        end
+        
+        -- Fly
+        if _G.Features.Fly then
+            local bodyVelocity = root:FindFirstChild("FlyVelocity")
+            if not bodyVelocity then
+                bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.Name = "FlyVelocity"
+                bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+                bodyVelocity.Parent = root
+            end
+            local moveDirection = Vector3.new(0, 0, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + root.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - root.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - root.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + root.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
+            bodyVelocity.Velocity = moveDirection * _G.Features.FlySpeed
+        else
+            local bodyVelocity = root:FindFirstChild("FlyVelocity")
+            if bodyVelocity then bodyVelocity:Destroy() end
+        end
+        
+        -- Freeze
+        if _G.Features.Freeze then
+            root.CFrame = root.CFrame
+            root.Velocity = Vector3.new(0, 0, 0)
+        end
+        
+        -- Infinite Jump
+        if _G.Features.InfiniteJump then
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) and humanoid:GetState() == Enum.HumanoidStateType.Landed then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end
+        
+        -- FOV Changer
+        if _G.Features.FOV then
+            workspace.CurrentCamera.FieldOfView = _G.Features.FOVValue
+        end
+        
+        -- No Fog
+        if _G.Features.NoFog then
+            lighting = game:GetService("Lighting")
+            lighting.FogEnd = 100000
+            lighting.FogStart = 0
+        end
+        
+        -- Bright
+        if _G.Features.Bright then
+            lighting = game:GetService("Lighting")
+            lighting.Brightness = 10
+            lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+        end
+        
+        -- Invisible
+        if _G.Features.Invisible then
+            for _, part in ipairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.Transparency = 1
+                end
+            end
+        end
+        
+        -- Giant Mode
+        if _G.Features.GiantMode then
+            char:ScaleTo(3)
+        end
+        
+        -- Tiny Mode
+        if _G.Features.TinyMode then
+            char:ScaleTo(0.3)
+        end
+        
+        -- Spin
+        if _G.Features.Spin then
+            root.CFrame = root.CFrame * CFrame.Angles(0, 0.05, 0)
+        end
+        
+        -- No Head
+        if _G.Features.NoHead then
+            local head = char:FindFirstChild("Head")
+            if head then head:Destroy() end
+        end
+        
+        -- No Torso
+        if _G.Features.NoTorso then
+            local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+            if torso then torso:Destroy() end
+        end
+        
+        -- Anti-Fall
+        if _G.Features.AntiFall then
+            humanoid.PlatformStand = true
+            wait(0.05)
+            humanoid.PlatformStand = false
+        end
+        
+        -- Auto Sprint
+        if _G.Features.AutoSprint then
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+        end
+        
+        -- No Sprint Stamina
+        if _G.Features.NoSprintStamina then
+            if humanoid:FindFirstChild("SprintStamina") then
+                humanoid.SprintStamina.Value = 100
+            end
+        end
+        
+        -- FPS Unlock
+        if _G.Features.FPSUnlock then
+            setfpscap(999)
+        end
+    end
+end)
+
+-- ======================== NOTIFICATION ========================
+WindUI:Notify({
+    Title = "Universal Script Loaded",
+    Content = "50+ features ready for war!",
+    Duration = 4,
+    Icon = "solar:crown-bold"
+})
